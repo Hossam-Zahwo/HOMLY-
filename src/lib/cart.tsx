@@ -1,0 +1,6 @@
+import { createContext,useContext,useEffect,useState, type ReactNode } from 'react';
+export type CartLine={variantId:string;quantity:number};
+type Cart={lines:CartLine[];ready:boolean;add:(id:string,n?:number)=>void;setQty:(id:string,n:number)=>void;remove:(id:string)=>void;clear:()=>void};
+const Context=createContext<Cart|null>(null);
+export function CartProvider({children}:{children:ReactNode}){const [lines,set]=useState<CartLine[]>([]);const [ready,setReady]=useState(false);useEffect(()=>{try{const a=JSON.parse(localStorage.getItem('homy-cart-v2')||'[]');if(Array.isArray(a))set(a.filter(x=>typeof x.variantId==='string'&&Number.isInteger(x.quantity)&&x.quantity>0))}catch{}setReady(true)},[]);useEffect(()=>{if(ready)localStorage.setItem('homy-cart-v2',JSON.stringify(lines))},[lines,ready]);return <Context.Provider value={{lines,ready,add:(id,n=1)=>{if(!Number.isInteger(n)||n<1)return;set(a=>a.some(l=>l.variantId===id)?a.map(l=>l.variantId===id?{...l,quantity:l.quantity+n}:l):[...a,{variantId:id,quantity:n}])},setQty:(id,n)=>{if(Number.isInteger(n)&&n>0)set(a=>a.map(l=>l.variantId===id?{...l,quantity:n}:l))},remove:id=>set(a=>a.filter(l=>l.variantId!==id)),clear:()=>set([])}}>{children}</Context.Provider>}
+export function useCart(){const c=useContext(Context);if(!c)throw new Error('Cart provider missing');return c}

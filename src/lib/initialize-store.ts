@@ -1,0 +1,3 @@
+import {supabase,requireConnection} from './supabase';
+let current:Promise<void>|null=null;
+export function initializeStore(){if(!current)current=(async()=>{requireConnection();const {starterData}=await import('./starter-data');const {error}=await supabase.rpc('homly_initialize_store',{p_data:starterData});if(error)throw new Error(error.code==='PGRST202'?'نفّذ database/RESTORE_STARTER.sql في Supabase مرة واحدة ثم أعد المحاولة.':error.message);window.dispatchEvent(new Event('homy-content-changed'));window.dispatchEvent(new Event('homy-catalog-changed'))})().catch(e=>{current=null;throw e});return current}
