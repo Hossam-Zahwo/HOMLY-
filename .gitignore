@@ -7,3 +7,19 @@ dist/
 .output/
 
 node_modules/
+
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+.output/
+.vercel/
+
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+.output/
+.vercel/
