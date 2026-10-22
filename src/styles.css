@@ -19,3 +19,53 @@
 @media(max-width:767px){.hero-trio{display:block!important;padding:12px}.hero-panel{display:none;min-height:440px}.hero-panel.hero-active{display:block}.hero-headline{top:25px}.hero-headline h1{font-size:29px}.hero-dots{display:flex;justify-content:center;gap:9px;padding:15px}.hero-dots button{width:9px;height:9px;border:0;background:#ccd1c8;border-radius:50%;padding:0}.hero-dots button.active{background:var(--sage);width:24px;border-radius:9px}.section{padding-block:calc(var(--section-space)*.7)}.panel{padding:20px;margin-bottom:20px}.product-grid{gap:16px 12px}.product-card h3{line-height:1.8}.cms-text{padding:28px 22px;min-height:210px;margin-inline:16px;width:auto}.cms-text h2{font-size:25px}.review-grid{grid-template-columns:1fr}.cms-link-row{grid-template-columns:auto 1fr;align-items:center}.cms-link-row label{grid-column:2}.cms-tabs{gap:6px}.cms-tabs button{padding:10px;font-size:12px}.cms-save-bar{padding:12px;gap:8px;flex-wrap:wrap;bottom:8px}.cms-save-bar>span{width:100%;font-size:12px}.cms-save-bar .btn{flex:1;font-size:12px;padding:10px}.cms-block>summary{gap:5px;flex-wrap:wrap}.cms-block>summary>span{min-width:50%}.cms-slide{padding:12px}.admin-top{padding-left:65px}.admin-top>a{margin-left:0}.notification-dropdown{position:fixed;top:65px;left:14px;right:14px;width:auto;max-height:calc(100dvh - 90px)}.floating-whatsapp{bottom:85px;left:14px;font-size:11px;padding:11px}.cms-upload>img{height:130px}.admin-category-grid .button-row{gap:5px}.page-copy{padding-inline:20px}.review-form .panel{padding:18px}.stars button{padding:8px}}
 @media(prefers-reduced-motion:reduce){.reveal-pending{opacity:1!important;transform:none!important}}
 .product-photo{border-radius:var(--image-radius);overflow:hidden}.product-photo img{transition:transform .6s ease}.logo>img{max-width:155px;max-height:65px;object-fit:contain;border-radius:0}.announcement{text-align:center;padding:10px 20px;background:var(--sage);color:white;font-size:13px}.admin-top-actions{display:flex;align-items:center;gap:20px;margin-right:auto}.review-invite-panel{margin-top:30px;padding-top:22px;border-top:1px solid var(--line)}.review-invite-panel>input{width:100%;margin-block:15px}.hero-panel>picture>img{transition:transform .65s ease}.reveal-ready{transition-delay:var(--reveal-delay,0ms)}@media(hover:hover){.product-card:hover .product-photo img,.hero-panel:hover>picture>img{transform:scale(1.035)}}@media(max-width:767px){.admin-top-actions{gap:12px}.admin-top>span{max-width:40%}.hero-panel{height:440px}}
+
+/* Product imagery: show complete product without cropping or hover zoom. */
+.product-card .product-photo img,.product-photo img,.gallery-main img,.thumbnails img{object-fit:contain!important;transform:none!important}
+.product-card:hover .product-photo img{transform:none!important}
+.image-editor>div{height:116px}
+.image-editor>div>img{height:90px;object-fit:contain}
+.image-order{display:flex;justify-content:space-between;gap:3px;margin-top:3px}
+.image-order button{background:#e9eee7;border-radius:4px;flex:1;cursor:pointer}
+
+/* Product images: complete artwork without hard cropping */
+.product-photo img,.product-card .product-photo img{object-fit:contain!important;object-position:center;background:#fff;padding:5px}
+.product-photo{background:#fff}
+.image-primary-label{position:absolute;bottom:5px;right:5px;background:#63745d;color:#fff;border-radius:5px;padding:2px 5px;font-size:10px}
+.image-editor>div{position:relative}
+
+/* HOMY variants: full-width individual edit cards */
+.variant-board{display:grid;gap:14px}.variant-board>.variant-edit-card{border:1px solid #e1e5de;border-radius:15px;background:#fff;overflow:hidden}.variant-board>.variant-edit-card[open]{box-shadow:0 5px 20px rgba(36,56,37,.07)}.variant-board>.variant-edit-card>summary{display:flex;gap:16px;align-items:center;cursor:pointer;padding:16px;flex-wrap:wrap}.variant-board>.variant-edit-card>summary img{width:64px;height:64px;object-fit:contain;border-radius:9px}.variant-board>.variant-edit-card .form-grid{padding:16px;gap:16px}.variant-quick-controls{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:#f6f8f5;border-radius:10px;padding:12px}.variant-board .image-editor img{object-fit:contain;background:#fff}.variant-board .image-editor>div{min-width:100px}.variant-board .image-editor .upload-tile{min-height:110px}.option-input{align-items:end}@media(max-width:800px){.variant-board>.variant-edit-card>summary{gap:8px}.variant-board>.variant-edit-card .form-grid{padding:8px}}
+
+/* HOMEY variant editor: approved visual layout */
+.homy-options-panel{background:#fff;border:1px solid #e4e6df;border-radius:15px;padding:26px}.homy-options-panel h2{font-size:22px}.homy-options-panel .option-input{display:grid;grid-template-columns:minmax(150px,1fr) minmax(240px,2fr) 44px;gap:14px}.homy-options-panel .button-row{display:flex;gap:12px;flex-wrap:wrap}.homy-variant-board{background:transparent;border:0;padding:0;display:block}.homy-variant-board>h2{font-size:24px}.homy-variant-actions{display:flex;align-items:center;gap:12px;margin:18px 0;flex-wrap:wrap}.homy-danger{border-color:#e6a4a4!important;color:#b63c3c!important}.homy-variant-board>.variant-edit-card{margin:12px 0;padding:0;border:1px solid #e4e5df;border-radius:12px;background:white;overflow:hidden}.homy-variant-board>.variant-edit-card>summary{padding:16px;display:flex;align-items:center;gap:14px;background:#fff;list-style:none}.homy-variant-board>.variant-edit-card>summary strong{font-size:15px}.homy-variant-board>.variant-edit-card>summary input[type=checkbox]{flex:none}.homy-variant-board>.variant-edit-card>.form-grid{padding:18px 20px 24px;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.homy-variant-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.homy-variant-heading h3{margin:0}.homy-variant-board .image-editor{display:flex;flex-wrap:wrap;gap:12px}.homy-variant-board .image-editor>div{width:115px;min-width:115px;height:142px;border:1px solid #e2e5df;border-radius:9px;overflow:hidden}.homy-variant-board .image-editor>div>img{height:100px;width:100%;object-fit:contain}.homy-variant-board .image-editor .upload-tile{width:115px;min-height:142px;border:1px dashed #bfc7bb;border-radius:9px}.homy-variant-board .image-primary-label{background:#52664f;color:#fff}.homy-variant-board .image-order{display:flex;justify-content:center;gap:4px}.homy-variant-board .image-order button{font-size:14px}.homy-variant-board .variant-quick-controls{grid-column:1/-1}@media(max-width:800px){.homy-options-panel .option-input{grid-template-columns:1fr 42px}.homy-options-panel .option-input>label:first-child{grid-column:1/-1}.homy-variant-board>.variant-edit-card>.form-grid{grid-template-columns:1fr}.homy-variant-board>.variant-edit-card>summary{flex-wrap:wrap}.homy-variant-heading{flex-wrap:wrap}}
+
+/* HOMEY: independent variant review cards */
+.homy-review-variants{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin:22px 0;direction:rtl}
+.homy-review-card{display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid #e1e5dc;border-radius:14px;background:#fff}
+.homy-review-card>img,.homy-review-card .picture{width:105px;height:105px;object-fit:contain;flex-shrink:0;border-radius:10px}
+.homy-review-card>div{min-width:0;flex:1}.homy-review-card p{margin:7px 0}
+@media(max-width:640px){.homy-review-variants{grid-template-columns:1fr}.homy-review-card{padding:10px}}
+
+/* Compact, calm variant photo gallery in admin only. */
+.homy-variant-board .image-editor{align-items:flex-start;gap:9px}
+.homy-variant-board .image-editor>div{width:82px;min-width:82px;height:108px;flex:0 0 82px;border-radius:8px;background:#fafbf9}
+.homy-variant-board .image-editor>div>img{width:100%;height:75px;object-fit:contain;padding:5px}
+.homy-variant-board .image-editor .upload-tile{width:82px;min-width:82px;min-height:108px;padding:7px 4px;font-size:10px;text-align:center}
+.homy-variant-board .image-editor .upload-tile svg{width:18px;height:18px}
+.homy-variant-board .image-editor .image-order{gap:2px}
+.homy-variant-board .image-editor .image-order button{font-size:11px;padding:1px 3px}
+.homy-variant-board .image-editor .image-primary-label{font-size:9px;padding:2px 5px}
+
+/* FIX: compact the actual variant CARD HEADER preview (not just upload thumbnails).
+   Picture renders an img; constrain it explicitly regardless of global gallery rules. */
+.homy-variant-board .variant-edit-card .variant-card-heading{display:flex;align-items:center;gap:10px;min-height:68px;padding:10px 14px;flex-wrap:wrap}
+.homy-variant-board .variant-edit-card .variant-card-heading>img,
+.homy-variant-board .variant-edit-card .variant-card-heading>.picture,
+.homy-variant-board .variant-edit-card .variant-card-heading>picture,
+.homy-variant-board .variant-edit-card .variant-card-heading>div:has(>img){width:52px!important;height:52px!important;min-width:52px!important;max-width:52px!important;min-height:52px!important;max-height:52px!important;flex:0 0 52px!important;aspect-ratio:1!important;object-fit:contain!important;overflow:hidden;border-radius:8px;background:#f5f6f2}
+.homy-variant-board .variant-edit-card .variant-card-heading img{width:52px!important;height:52px!important;max-width:52px!important;max-height:52px!important;object-fit:contain!important;aspect-ratio:1!important}
+.homy-variant-board .variant-edit-card .variant-card-heading strong{flex:1 1 170px;min-width:0;overflow-wrap:anywhere}
+/* All dashboard previews remain small even in review stage. */
+.admin-body .preview-product>img,.admin-body .preview-product>.picture{width:90px!important;height:90px!important;max-width:90px!important;max-height:90px!important;object-fit:contain!important;flex:0 0 90px!important}
+@media(max-width:640px){.homy-variant-board .variant-edit-card .variant-card-heading{gap:7px;padding:9px}.homy-variant-board .variant-edit-card .variant-card-heading strong{flex-basis:130px}}

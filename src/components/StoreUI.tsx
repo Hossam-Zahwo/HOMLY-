@@ -1,7 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
-import { catalog, explain, money, imageFor, type Catalog, type Product, type Variant } from '@/lib/commerce';
+import { catalog, explain, money, imageFor, assetUrl, type Catalog, type Product, type Variant } from '@/lib/commerce';
 import { useCart } from '@/lib/cart';
 import { configured } from '@/lib/supabase';
 import { useSite, useCopy } from '@/lib/site';
@@ -12,9 +12,9 @@ export function Picture({ src, alt = '', className = '' }: {
     src?: string;
     alt?: string;
     className?: string;
-}) { return <img src={src || '/placeholder.svg'} alt={alt} className={className} loading="lazy" onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder.svg'; }}/>; }
+}) { return <img src={assetUrl(src || '')} alt={alt} className={className} loading="lazy" decoding="async" onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder.svg'; }}/>; }
 export function ModeNotice() { return !configured ? <div className="mode-notice warning">لم تُضف إعدادات Supabase بعد. أضفها إلى .env.local لعرض البيانات وحفظها.</div> : null; }
-export function useCatalog(admin = false) { const [data, setData] = useState<Catalog>({ products: [], categories: [] }); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [version, setVersion] = useState(0); useEffect(()=>{const refresh=()=>setVersion(v=>v+1);window.addEventListener('homy-catalog-changed',refresh);return()=>window.removeEventListener('homy-catalog-changed',refresh)},[]); useEffect(() => { let live = true; setLoading(true); catalog(admin).then(d => { if (live) {
+export function useCatalog(admin = false) { const [data, setData] = useState<Catalog>({ products: [], categories: [] }); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [version, setVersion] = useState(0); useEffect(()=>{const refresh=()=>setVersion(v=>v+1);window.addEventListener('homy-catalog-changed',refresh);window.addEventListener('focus',refresh);const visible=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',visible);return()=>{window.removeEventListener('homy-catalog-changed',refresh);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',visible)}},[]); useEffect(() => { let live = true; setLoading(true); catalog(admin).then(d => { if (live) {
     setData(d);
     setError('');
 } }).catch(e => { if (live) {setData({products:[],categories:[]});setError(explain(e));} }).finally(() => { if (live)
