@@ -7,7 +7,7 @@ import { configured } from '@/lib/supabase';
 import { useSite, useCopy } from '@/lib/site';
 import { safeHref, whatsappHref } from '@/lib/content-model';
 import { toast } from 'sonner';
-export function Logo() { const { config } = useSite(); return <Link to="/" className="logo" aria-label={config.brand.name + ' الرئيسية'}>{config.brand.logo ? <img src={config.brand.logo} alt={config.brand.name}/> : <><b>{config.brand.name}</b><small>{config.brand.latin}</small></>}</Link>; }
+export function Logo() { const { config } = useSite(); return <Link to="/" className="logo" aria-label={config.brand.name + ' الرئيسية'}>{config.brand.logo ? <img src={assetUrl(config.brand.logo)} alt={config.brand.name} style={{width:"auto",height:"auto",maxHeight:64,maxWidth:190,objectFit:"contain"}}/> : <><b>{config.brand.name}</b><small>{config.brand.latin}</small></>}</Link>; }
 export function Picture({ src, alt = '', className = '' }: {
     src?: string;
     alt?: string;

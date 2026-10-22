@@ -107,8 +107,19 @@ export async function catalog(admin=false):Promise<Catalog>{
 export function assetUrl(path: string | null) { if (!path)
     return '/placeholder.svg'; if (path.startsWith('/') || /^https?:\/\//.test(path))
     return path; return supabase.storage.from('homly-products').getPublicUrl(path).data.publicUrl; }
-export function cards(products: Product[]) { return products.flatMap(p => { const vs = p.variants.filter(v => v.status === 'published'); if (p.status !== 'published')
-    return []; return (p.display_mode === 'separate_variants' ? vs.filter(v => v.is_listed) : [...vs].sort((a, b) => a.price_minor - b.price_minor).slice(0, 1)).map(v => ({ p, v })); }); }
+export const availableStock = (v: Variant) => Math.max(0, Number(v.stock_on_hand || 0) - Number(v.stock_reserved || 0));
+export function cards(products: Product[]) {
+ const rows = products.flatMap(p => {
+  const vs = p.variants.filter(v => v.status === 'published');
+  if (p.status !== 'published') return [];
+  // For grouped products, show an in-stock variant whenever one exists.
+  const selected = p.display_mode === 'separate_variants'
+   ? vs.filter(v => v.is_listed)
+   : [...vs].sort((a,b) => Number(availableStock(b)>0)-Number(availableStock(a)>0) || a.price_minor-b.price_minor).slice(0,1);
+  return selected.map(v => ({p,v}));
+ });
+ return rows.sort((a,b) => Number(availableStock(b.v)>0)-Number(availableStock(a.v)>0));
+}
 export function imageFor(p: Product, v?: Variant) { return v?.images[0] || p.images[0] || '/placeholder.svg'; }
 export async function shippingZones(includeInactive = false): Promise<Zone[]> { requireConnection(); let q = supabase.from('homly_shipping_zones').select('id,governorate,areas,fee_minor,is_active'); if (!includeInactive)
     q = q.eq('is_active', true); const { data, error } = await q; check(error); return data || []; }

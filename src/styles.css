@@ -69,3 +69,16 @@
 /* All dashboard previews remain small even in review stage. */
 .admin-body .preview-product>img,.admin-body .preview-product>.picture{width:90px!important;height:90px!important;max-width:90px!important;max-height:90px!important;object-fit:contain!important;flex:0 0 90px!important}
 @media(max-width:640px){.homy-variant-board .variant-edit-card .variant-card-heading{gap:7px;padding:9px}.homy-variant-board .variant-edit-card .variant-card-heading strong{flex-basis:130px}}
+
+/* HOMEY mobile header: keep the brand visible and put search on its own row. */
+@media (max-width:767px){
+ .store-header .header-main{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;grid-template-areas:"menu brand actions" "search search search";align-items:center;column-gap:8px;row-gap:10px;padding-block:10px;min-width:0}
+ .store-header .header-main>.mobile-menu{grid-area:menu;position:static;justify-self:start}
+ .store-header .header-main>.logo{grid-area:brand;position:static;top:auto;left:auto;transform:none;min-width:0;max-width:100%;justify-self:center;overflow:hidden}
+ .store-header .header-main>.logo img{width:auto!important;height:auto!important;max-width:min(170px,100%)!important;max-height:55px!important;object-fit:contain}
+ .store-header .header-main>.logo b{font-size:clamp(23px,7vw,34px)}
+ .store-header .header-main>.header-actions{grid-area:actions;justify-self:end;min-width:0;margin:0;gap:0}
+ .store-header .header-main>.search{grid-area:search;order:initial;position:static;max-width:100%;width:100%;min-width:0;flex-basis:auto;margin:0;height:43px;border-radius:10px;padding-inline:12px;overflow:hidden}
+ .store-header .header-main>.search input{width:100%;min-width:0;height:40px;min-height:40px;padding:6px 2px;font-size:13px}
+ .store-header .header-main>.search svg{flex:none}
+}
