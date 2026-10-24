@@ -1,0 +1,6 @@
+لا يوجد SQL إلزامي للتعديلات الحالية.
+تم استخدام وظائف Supabase الموجودة أصلًا في السورس:
+- homly_reorder_categories
+- homly_remove_catalog_item
+- upsert on homly_categories
+إذا ظهرت رسالة function does not exist أو permission denied، يلزم مراجعة تعريفات الدوال وصلاحيات RLS في قاعدة البيانات قبل إضافة أي SQL.
