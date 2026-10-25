@@ -280,3 +280,80 @@ html,body,#root{max-width:100%;overflow-x:clip}
 /* The budget carousel previously forced display:block; maintain matching heights. */
 .budget-band .budget-products .product-card,
 .budget-band .budget-products .product-card:last-child{display:flex;flex-direction:column}
+
+/* HOMEY / 2026-10-25: compact catalog pagination, with first/last pages always visible. */
+.catalog-pagination{
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;
+  max-width:100%;min-width:0;gap:6px;margin:0 auto;
+  padding:24px 6px;
+}
+.catalog-pagination .catalog-page-segment{display:inline-flex;align-items:center;flex:0 0 auto;gap:6px;min-width:0}
+.catalog-pagination button{display:inline-flex;align-items:center;justify-content:center;gap:2px;white-space:nowrap;
+  min-width:38px;height:40px;padding:0 8px;line-height:1;border-radius:8px}
+.catalog-pagination button.page-more{min-width:64px;background:#f4f5f1;color:#4d6248;border-color:#d9e0d5;font-size:12px}
+.catalog-pagination button.page-more:hover{background:#e8eee4}
+.catalog-pagination button.page-number{font-variant-numeric:tabular-nums}
+@media(max-width:480px){
+  .catalog-pagination{gap:4px;padding:18px 0}
+  .catalog-pagination .catalog-page-segment{gap:4px}
+  .catalog-pagination button{min-width:34px;height:36px;padding:0 6px;font-size:12px}
+  .catalog-pagination button.page-more{min-width:57px;padding:0 5px;font-size:11px}
+  .catalog-pagination button.page-more svg{width:13px;height:13px}
+}
+
+/* Image ordering: drag the handle with mouse or finger. Overrides legacy arrow controls. */
+.sortable-image-gallery{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;max-width:100%;min-width:0}
+.image-editor.sortable-image-gallery>.sortable-image-item,
+.homy-variant-board .image-editor.sortable-image-gallery>.sortable-image-item{
+  position:relative;width:115px;min-width:115px;flex:0 0 115px;height:145px;
+  border:1px solid #dfe5dd;border-radius:10px;background:#fafbf9;
+  overflow:hidden;transition:box-shadow .15s,border-color .15s,opacity .15s;
+}
+.image-editor.sortable-image-gallery>.sortable-image-item>img,
+.homy-variant-board .image-editor.sortable-image-gallery>.sortable-image-item>img{
+  width:100%;height:100%;object-fit:contain;padding:10px 8px 41px;border-radius:9px;
+}
+.image-editor.sortable-image-gallery>.sortable-image-item>.image-delete,
+.homy-variant-board .image-editor.sortable-image-gallery>.sortable-image-item>.image-delete{
+  position:absolute;top:5px;left:5px;display:grid;place-items:center;
+  width:27px;height:27px;padding:0;border-radius:50%;background:#fff;
+  color:#8d3c3c;box-shadow:0 1px 4px #0002;z-index:2;
+}
+.image-editor.sortable-image-gallery>.sortable-image-item>.image-drag-handle,
+.homy-variant-board .image-editor.sortable-image-gallery>.sortable-image-item>.image-drag-handle{
+  position:absolute;top:auto;bottom:6px;right:6px;left:6px;
+  display:flex;justify-content:center;align-items:center;gap:2px;
+  width:auto;height:32px;padding:0 3px;min-width:0;z-index:3;
+  background:#e8eee5;border:1px solid #d2decd;border-radius:7px;
+  color:#425940;font-size:10px;font-weight:700;cursor:grab;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.sortable-image-gallery .image-drag-handle:active{cursor:grabbing}
+.sortable-image-gallery .sortable-image-item.is-dragging{opacity:.65;box-shadow:0 0 0 2px #9da995}
+.sortable-image-gallery .sortable-image-item.is-drop-target{border-color:#526b50;box-shadow:inset 0 0 0 2px #526b50,0 0 0 2px #b7cbb1}
+.sortable-image-gallery .sortable-image-item .image-primary-label{
+  position:absolute;top:6px;right:5px;bottom:auto;z-index:1;
+  background:#52664f;color:white;border-radius:5px;padding:3px 5px;font-size:10px;
+}
+.image-editor.sortable-image-gallery>.upload-tile,
+.homy-variant-board .image-editor.sortable-image-gallery>.upload-tile{
+  box-sizing:border-box;display:flex;flex-direction:column;gap:6px;
+  width:115px;min-width:115px;flex:0 0 115px;min-height:145px;
+  padding:12px 6px;border-radius:10px;text-align:center;
+}
+.sortable-image-gallery .upload-tile input{display:none}
+@media(max-width:480px){
+  .sortable-image-gallery{gap:8px}
+  .image-editor.sortable-image-gallery>.sortable-image-item,
+  .homy-variant-board .image-editor.sortable-image-gallery>.sortable-image-item{
+    width:105px;min-width:105px;flex-basis:105px;height:136px
+  }
+  .image-editor.sortable-image-gallery>.upload-tile,
+  .homy-variant-board .image-editor.sortable-image-gallery>.upload-tile{
+    width:105px;min-width:105px;flex-basis:105px;min-height:136px
+  }
+}
+
+/* Touch dragging works from the photograph itself, not just the handle. */
+.sortable-image-gallery>.sortable-image-item>img{touch-action:none;user-select:none;-webkit-user-drag:none;-webkit-user-select:none;cursor:grab}
+.sortable-image-gallery>.sortable-image-item.is-dragging>img{cursor:grabbing}
