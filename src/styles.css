@@ -124,3 +124,159 @@ html,body,#root{max-width:100%;overflow-x:clip}
 .homey-initial-loading{min-height:55vh;display:flex;align-items:center;justify-content:center;width:100%;background:var(--site-bg,#fff)}
 .homey-initial-loading .home-loading-spinner{display:block;flex:none}
 @media(prefers-reduced-motion:reduce){.homey-initial-loading .home-loading-spinner{animation-duration:1.6s}}
+
+/* Budget products only: static headline + four-card manual carousel. */
+.budget-band .budget-layout{align-items:center}
+.budget-band .budget-intro{min-width:0}
+.budget-band .budget-content{min-width:0}
+.budget-band .budget-topline{display:flex;flex-direction:row-reverse;justify-content:space-between;align-items:center;min-height:24px;margin-bottom:10px;gap:12px}
+.budget-band .budget-view-all{display:inline-flex;align-items:center;gap:5px;color:#42553f;font-weight:750;font-size:13px;white-space:nowrap}
+.budget-band .budget-view-all:hover{text-decoration:underline}
+.budget-band .budget-page-status{font-size:11px;color:#6e776b;direction:ltr}
+.budget-band .budget-slider{position:relative;min-width:0}
+.budget-band .budget-products{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;overflow:visible;padding:0;scroll-snap-type:none}
+.budget-band .budget-products .product-card,.budget-band .budget-products .product-card:last-child{display:block;min-width:0;flex:initial}
+.budget-band .budget-arrow{position:absolute;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:37px;height:44px;padding:0;border:1px solid #d8ded4;border-radius:12px;background:#fffffff2;color:#42553f;box-shadow:0 3px 12px #253b251c;z-index:2}
+.budget-band .budget-arrow:hover{background:#f3f7f0}
+.budget-band .budget-arrow-prev{right:-17px}
+.budget-band .budget-arrow-next{left:-17px}
+@media(max-width:1100px){.budget-band .budget-products{grid-template-columns:repeat(4,minmax(0,1fr))}.budget-band .budget-products .product-card:last-child{display:block}}
+@media(max-width:767px){
+ .budget-band .budget-layout{display:block}
+ .budget-band .budget-intro{display:block;margin-bottom:5px}
+ .budget-band .budget-intro h2{margin-bottom:4px}
+ .budget-band .budget-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow:visible;padding:0}
+ .budget-band .budget-products .product-card,.budget-band .budget-products .product-card:last-child{display:block;flex:initial}
+ /* Avoid a second row before the mobile breakpoint hook hydrates. */
+ .budget-band .budget-products .product-card:nth-child(n+3){display:none}
+ .budget-band .budget-topline{margin-bottom:10px}
+ .budget-band .budget-arrow{width:33px;height:40px;border-radius:10px}
+ .budget-band .budget-arrow-prev{right:-10px}
+ .budget-band .budget-arrow-next{left:-10px}
+}
+
+/* HOMEY product cards — one consistent photo/title/options/price/action layout.
+   Scope exclusively to storefront product cards (catalog, homepage and related).
+   Images always fit inside the same frame without stretching or cropping. */
+.product-grid>.product-card,
+.budget-band .budget-products>.product-card,
+.product-card {
+  display:flex;
+  flex-direction:column;
+  align-self:stretch;
+  height:100%;
+  min-width:0;
+}
+.product-card .product-photo,
+.mini .product-card .product-photo,
+.budget-products .product-card .product-photo {
+  display:block;
+  position:relative;
+  flex:none;
+  width:100%;
+  aspect-ratio:1 / 1;
+  overflow:hidden;
+  background:#fff;
+}
+.product-card .product-photo img {
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:100%;
+  object-fit:contain!important;
+  object-position:center;
+  padding:clamp(10px,1.3vw,18px);
+}
+.product-card .product-copy,
+.mini .product-card .product-copy {
+  display:flex;
+  flex-direction:column;
+  flex:1 1 auto;
+  min-height:0;
+  gap:0;
+  padding:clamp(10px,1.3vw,15px);
+}
+.product-card .product-card-title-link {
+  display:block;
+  min-width:0;
+  height:60.45px;
+  flex:none;
+  overflow:hidden;
+}
+.product-card .product-card-title-link h3,
+.mini .product-card .product-card-title-link h3,
+.budget-products .product-card .product-card-title-link h3 {
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:3;
+  line-clamp:3;
+  font-size:13px;
+  line-height:1.55;
+  max-height:calc(1.55em * 3);
+  min-height:0;
+  margin:0;
+  overflow:hidden;
+  overflow-wrap:anywhere;
+}
+.product-card .options-copy,
+.mini .product-card .options-copy {
+  display:block;
+  width:100%;
+  min-width:0;
+  height:20px;
+  min-height:20px;
+  margin:5px 0 0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  line-height:20px;
+  font-size:11px;
+}
+.product-card .price-row,
+.budget-products .product-card .price-row {
+  display:flex;
+  flex-wrap:wrap;
+  align-content:center;
+  align-items:center;
+  gap:4px 9px;
+  height:50px;
+  min-height:50px;
+  margin:auto 0 8px;
+  font-size:14px;
+  overflow:hidden;
+}
+.product-card .price-row strong{white-space:nowrap}
+.product-card .price-row del{white-space:nowrap}
+.product-card .product-copy>.btn,
+.mini .product-card .product-copy>.btn,
+.budget-products .product-card .product-copy>.btn {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  width:100%;
+  min-height:39px;
+  padding:8px 6px;
+  font-size:12px;
+  flex:none;
+  margin-top:0;
+}
+@media(max-width:767px){
+  .product-card .product-photo img{padding:8px}
+  .product-card .product-copy,
+  .mini .product-card .product-copy{padding:10px 9px 11px}
+  .product-card .product-card-title-link,
+  .mini .product-card .product-card-title-link{height:51.75px}
+  .product-card .product-card-title-link h3,
+  .mini .product-card .product-card-title-link h3,
+  .budget-products .product-card .product-card-title-link h3{font-size:11.5px;line-height:1.5;max-height:calc(1.5em * 3)}
+  .product-card .options-copy{font-size:10px;height:18px;min-height:18px;line-height:18px}
+  .product-card .price-row,
+  .budget-products .product-card .price-row{font-size:12px;height:48px;min-height:48px;gap:3px 7px;margin-bottom:7px}
+  .product-card .product-copy>.btn,
+  .mini .product-card .product-copy>.btn,
+  .budget-products .product-card .product-copy>.btn{min-height:36px;font-size:11px;padding:7px 3px;gap:4px}
+}
+/* The budget carousel previously forced display:block; maintain matching heights. */
+.budget-band .budget-products .product-card,
+.budget-band .budget-products .product-card:last-child{display:flex;flex-direction:column}

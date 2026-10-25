@@ -44,5 +44,32 @@ export function Quantity({ value, onChange, max = 999 }: {
 export function ProductCard({ p, v }: {
     p: Product;
     v: Variant;
-}) { const copy = useCopy(); const { add } = useCart(); const stock = v.stock_on_hand - v.stock_reserved; return <article className="product-card"><Link to="/product/$slug" params={{ slug: v.slug }} className="product-photo"><Picture src={imageFor(p, v)} alt={v.title_override || p.title_ar}/>{v.compare_at_minor && v.compare_at_minor > v.price_minor ? <span className="discount">عرض خاص</span> : null}</Link><div className="product-copy"><Link to="/product/$slug" params={{ slug: v.slug }}><h3>{v.title_override || p.title_ar}</h3></Link>{Object.values(v.options).length > 0 && <p className="muted options-copy">{Object.values(v.options).join(' / ')}</p>}<div className="price-row"><strong>{money(v.price_minor)}</strong>{v.compare_at_minor && v.compare_at_minor > v.price_minor ? <del>{money(v.compare_at_minor)}</del> : null}</div><button disabled={stock < 1} className="btn compact" onClick={() => { add(v.id); toast.success('تمت الإضافة للسلة'); }}><ShoppingCart size={16}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button></div></article>; }
+}) {
+    const copy = useCopy();
+    const { add } = useCart();
+    const stock = v.stock_on_hand - v.stock_reserved;
+    const title = v.title_override || p.title_ar;
+    const options = Object.values(v.options).filter(Boolean).join(' / ');
+    const hasDiscount = Boolean(v.compare_at_minor && v.compare_at_minor > v.price_minor);
+    return <article className="product-card">
+        <Link to="/product/$slug" params={{ slug: v.slug }} className="product-photo" aria-label={title}>
+            <Picture src={imageFor(p, v)} alt={title}/>
+            {hasDiscount ? <span className="discount">عرض خاص</span> : null}
+        </Link>
+        <div className="product-copy">
+            <Link to="/product/$slug" params={{ slug: v.slug }} className="product-card-title-link" title={title}>
+                <h3>{title}</h3>
+            </Link>
+            <p className="muted options-copy" title={options || undefined} aria-hidden={!options}>{options || '\u00a0'}</p>
+            <div className="price-row">
+                <strong>{money(v.price_minor)}</strong>
+                {hasDiscount && v.compare_at_minor ? <del>{money(v.compare_at_minor)}</del> : null}
+            </div>
+            <button disabled={stock < 1} className="btn compact" onClick={() => {
+                add(v.id);
+                toast.success('تمت الإضافة للسلة');
+            }}><ShoppingCart size={16}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button>
+        </div>
+    </article>;
+}
 export function TrustStrip() { const copy = useCopy(); return <div className="trust-strip wrap"><div><Truck /><span>{copy('trustShipping')}<small>{copy('shippingNote')}</small></span></div><div><ShieldCheck /><span>{copy('trustQuality')}<small>وصف ومواصفات لكل منتج</small></span></div><div><PackageCheck /><span>{copy('trustOrders')}<small>حالة الطلب وتفاصيل القطع</small></span></div></div>; }
