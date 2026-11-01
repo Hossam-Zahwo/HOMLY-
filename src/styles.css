@@ -616,3 +616,50 @@ html,body,#root{max-width:100%;overflow-x:clip}
   .product-page .product-tabs dl > div { gap: 8px; }
   .product-page .product-tabs dl dt { flex-basis: 37%; }
 }
+
+/* HOMEY checkout UX + compact cart confirmation (2026-11-01). */
+.homey-checkout-form{margin-bottom:14px}
+.homey-checkout-form .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.homey-checkout-form label{font-size:14px;min-width:0}
+.homey-checkout-form input,.homey-checkout-form select,.homey-checkout-form textarea{font-size:15px;min-height:48px;border-radius:10px}
+.homey-checkout-form textarea{resize:vertical}
+.checkout-form-heading{display:flex;align-items:flex-start;gap:11px;margin-bottom:23px}
+.checkout-form-heading>svg{color:var(--sage);margin-top:4px;flex-shrink:0}
+.checkout-form-heading h2{margin-bottom:2px;font-size:22px}
+.checkout-form-heading p{margin-bottom:0}
+.required-hint{color:#ab4949;display:inline}
+.checkout-remember{flex-direction:row;align-items:center;font-weight:500!important;font-size:12px!important}
+.checkout-remember input{min-height:18px!important;width:18px}
+.checkout-payment-note{display:flex;align-items:center;gap:12px;background:#f4f7f1;border-radius:12px;padding:13px 15px;margin-top:20px;color:#425c40}
+.checkout-payment-note small{font-weight:400;color:var(--muted);margin-top:3px;line-height:1.6}
+.homey-order-summary .summary-line{align-items:flex-start}
+.homey-order-summary .summary-line>b{white-space:nowrap}
+.inline-shipping-icon{display:inline-block;vertical-align:middle}
+.free-shipping-label{font-size:13px;color:#336b44;white-space:normal}
+.free-shipping-label del{display:block;font-size:11px;color:var(--muted)}
+.free-shipping-message{border-radius:10px;background:#eef5e9;padding:9px 12px;color:#41683b;font-size:12px;line-height:1.7;margin-bottom:12px}
+.checkout-primary-action{width:100%;font-size:15px;min-height:52px}
+.shipping-zone-list{display:flex;flex-direction:column;gap:4px;margin:18px 0}
+.shipping-zone-row{display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(90px,.7fr) minmax(100px,.75fr) auto;align-items:center;gap:12px;padding:12px 8px;border-bottom:1px solid var(--line);font-size:13px}
+.shipping-zone-row b{white-space:nowrap}
+.shipping-zone-row small{display:block;margin-top:3px}
+.shipping-zone-active{color:#366e45;font-size:11px}
+.shipping-zone-editor{margin-top:22px;padding:18px;background:#f7f8f4;border-radius:14px}
+.shipping-promo-form{display:grid;gap:18px}
+.shipping-promo-form>.check-label{flex-direction:row;align-items:center;font-size:15px}
+.shipping-promo-form .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.shipping-promo-status{font-size:12px;padding:6px 10px;border-radius:100px;background:#eef0ed;color:#576354}
+.shipping-promo-status.active{background:#e1f0dc;color:#336c3c}
+/* Sonner is below the sticky header, and cart feedback goes away in 0.85s. */
+[data-sonner-toast].homey-cart-toast{font-size:13px!important;padding:10px 14px!important;max-width:min(270px,calc(100vw - 40px))!important}
+@media(max-width:680px){
+  .homey-checkout-form .form-grid,.shipping-promo-form .form-grid{grid-template-columns:1fr}
+  .homey-checkout-form .full{grid-column:1}
+  .checkout-form-heading h2{font-size:19px}
+  .shipping-zone-row{grid-template-columns:minmax(90px,1fr) auto;gap:8px;padding:12px 4px}
+  .shipping-zone-row .btn{justify-self:end}
+  .shipping-zone-editor{padding:12px}
+  /* Center the add-to-cart acknowledgment, never blocking the header cart badge. */
+  [data-sonner-toaster]:has(.homey-cart-toast){bottom:auto!important;top:42%!important;pointer-events:none!important}
+  [data-sonner-toaster] .homey-cart-toast{pointer-events:none!important}
+}

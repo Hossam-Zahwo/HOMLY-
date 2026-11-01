@@ -49,6 +49,29 @@ export type Zone = {
     fee_minor: number;
     is_active: boolean;
 };
+export type ShippingPromotion = {
+    enabled: boolean;
+    starts_at: string | null;
+    ends_at: string | null;
+    is_active: boolean;
+};
+export function effectiveShippingFee(zone: Zone | undefined, promotion: ShippingPromotion | null): number {
+    return zone ? (promotion?.is_active ? 0 : zone.fee_minor) : 0;
+}
+export async function shippingPromotion(): Promise<ShippingPromotion> {
+    requireConnection();
+    const {data, error} = await supabase.rpc('homly_get_shipping_promotion');
+    check(error);
+    return data as ShippingPromotion;
+}
+export async function saveShippingPromotion(input: {enabled: boolean; starts_at: string | null; ends_at: string | null}): Promise<ShippingPromotion> {
+    requireConnection();
+    const {data, error} = await supabase.rpc('homly_set_shipping_promotion', {
+        p_enabled: input.enabled, p_starts_at: input.starts_at, p_ends_at: input.ends_at,
+    });
+    check(error);
+    return data as ShippingPromotion;
+}
 export type OrderItem = {
     id: string;
     variant_id: string;
@@ -151,7 +174,7 @@ export type CheckoutPayload = {
 export async function placeOrder(payload: CheckoutPayload):Promise<Order>{
  requireConnection();
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),45000);let response;
- try{response=await supabase.rpc('homly_checkout',{payload}).abortSignal(controller.signal)}catch{throw new Error('انقطع الاتصال قبل وصول تأكيد الطلب. أعد المحاولة بنفس البيانات لتجنب التكرار.')}finally{clearTimeout(timer)}
+ try{response=await supabase.rpc('homly_checkout_effective',{payload}).abortSignal(controller.signal)}catch{throw new Error('انقطع الاتصال قبل وصول تأكيد الطلب. أعد المحاولة بنفس البيانات لتجنب التكرار.')}finally{clearTimeout(timer)}
  const {data,error}=response;
  if(error)throw new Error(error.code==='PGRST202'?'خدمة تأكيد الطلب تحتاج تحديث SQL المرفق. لم يصل تأكيد حفظ؛ أعد المحاولة بعد تحديث القاعدة.':error.message);
 

@@ -67,7 +67,7 @@ export function ProductCard({ p, v }: {
             </div>
             <button disabled={stock < 1} className="btn compact" onClick={() => {
                 add(v.id);
-                toast.success('تمت الإضافة للسلة');
+                toast.success('اتضاف للسلة ✓', { duration: 850, className: 'homey-cart-toast' });
             }}><ShoppingCart size={16}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button>
         </div>
     </article>;

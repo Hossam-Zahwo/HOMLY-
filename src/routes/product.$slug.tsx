@@ -63,7 +63,7 @@ function ProductPage() {
   const addItem = () => {
     if (available < qty) return;
     add(v.id, qty);
-    toast.success('تمت إضافة اختيارك إلى السلة');
+    toast.success('اتضاف للسلة ✓', { duration: 850, className: 'homey-cart-toast' });
   };
 
   return <>
