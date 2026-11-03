@@ -156,6 +156,24 @@ export async function saveCategory(c: Partial<Category>) { requireConnection(); 
 export async function uploadImage(file: File) { if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024)
     throw new Error('الصورة يجب أن تكون JPG أو PNG أو WebP وبحد أقصى 5MB'); ; requireConnection(); const path = crypto.randomUUID() + '.' + file.type.split('/')[1]; const { error } = await supabase.storage.from('homly-products').upload(path, file, { upsert: false, contentType: file.type }); check(error); return path; }
 export async function orders(): Promise<Order[]> { requireConnection(); const { data, error } = await supabase.from('homly_orders').select('*,homly_order_items(*),homly_order_status_history(*),homly_order_item_checks(*)').order('created_at', { ascending: false }); check(error); return (data || []).map(o => ({ ...o, items: (o.homly_order_items||[]).map((i:any)=>({...i,image_snapshot:assetUrl(i.image_snapshot)})), history: o.homly_order_status_history, checks: o.homly_order_item_checks || [] })); }
+/** Only unfulfilled, unpaid orders can be permanently removed as test orders. */
+export function isDeletableTestOrder(order: Order): boolean {
+    return ['new', 'confirmed', 'preparing', 'cancelled'].includes(order.fulfillment_status)
+        && ['unpaid', 'pending', 'failed'].includes(order.payment_status);
+}
+export async function deleteTestOrders(ids: string[]): Promise<number> {
+    requireConnection();
+    if (!ids.length || ids.length > 50 || new Set(ids).size !== ids.length) {
+        throw new Error('حدد من طلب واحد لحد 50 طلب بدون تكرار.');
+    }
+    const { data, error } = await supabase.rpc('homly_delete_test_orders', { p_order_ids: ids });
+    check(error);
+    if (typeof data !== 'number' || data !== ids.length) {
+        throw new Error('عدد الطلبات المحذوفة مش مطابق للاختيار. حدّث قائمة الطلبات وراجعها.');
+    }
+    window.dispatchEvent(new Event('homy-catalog-changed'));
+    return data;
+}
 export async function setOrderStatus(id: string, status: string, note: string) { requireConnection(); const { error } = await supabase.rpc('homly_update_order_status', { p_order_id: id, p_status: status, p_note: note }); check(error); }
 export type CheckoutPayload = {
     customer_name: string;

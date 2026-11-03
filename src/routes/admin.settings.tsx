@@ -45,7 +45,7 @@ function Settings() {
     void loadSite(true).then(d => { setKey(d.config.pushPublicKey); setVersion(d.version); }).catch(() => {});
   }, []);
 
-  const configuredCount = new Set(zones.filter(z => z.is_active).map(z => z.governorate)).size;
+  const configuredCount = new Set(zones.filter(z => z.is_active && EGYPT_GOVERNORATES.includes(z.governorate as (typeof EGYPT_GOVERNORATES)[number])).map(z => z.governorate)).size;
   return <>
     <h1>إعدادات المتجر والربط</h1>
     <section className="panel">
@@ -62,7 +62,7 @@ function Settings() {
 
     <section className="panel" id="shipping-promotion">
       <div className="section-head"><h2>عرض الشحن المجاني</h2><span className={'shipping-promo-status ' + (promotion.is_active ? 'active' : '')}>{promotion.is_active ? 'شغال الآن' : promotion.enabled ? 'مجدول أو منتهي' : 'غير مفعّل'}</span></div>
-      <p className="muted small">فعّل شحن مجاني لكل المحافظات المتاحة خلال فترة محددة. أسعار المحافظات الأصلية هتفضل محفوظة، وهترجع تلقائيًا بعد انتهاء الفترة.</p>
+      <p className="muted small">فعّل شحن مجاني لكل محافظات مصر خلال فترة محددة. أسعار المحافظات الأصلية هتفضل محفوظة، وهترجع تلقائيًا بعد انتهاء الفترة.</p>
       {promoError && <Notice>{promoError}</Notice>}
       <form className="shipping-promo-form" onSubmit={async e => {
         e.preventDefault();
@@ -93,19 +93,19 @@ function Settings() {
 
     <section className="panel" id="shipping-zones">
       <div className="section-head"><h2>أسعار الشحن حسب المحافظة</h2><button className="btn" onClick={() => {setAreasText('');setZone({ governorate: '', areas: [], fee_minor: 0, is_active: true });}}>إضافة منطقة</button></div>
-      <p className="muted small">المتاح للطلب حاليًا: {configuredCount} محافظة. المحافظات الجديدة التي لم يُحدد لها سعر تبدأ «غير مفعّلة» حتى تضبط سعرها وتفعّلها؛ لتجنب احتساب شحن صفر بالغلط.</p>
+      <p className="muted small">المتاح للطلب: {configuredCount} من أصل 27 محافظة. بعد تشغيل تحديث SQL الجديد، كل محافظات مصر متاحة دائمًا. ممكن تغيّر سعر الشحن لكن مش ممكن توقف محافظة. سعر الشحن 0 جنيه مسموح وبيخلي المحافظة متاحة بشحن مجاني.</p>
       <div className="shipping-zone-list">
         {zones.map(z => <div className="shipping-zone-row" key={z.id}>
           <span><strong>{z.governorate}</strong>{z.areas.length > 0 && <small className="muted">{z.areas.join('، ')}</small>}</span>
           <b>{(z.fee_minor / 100).toLocaleString('ar-EG')} ج.م</b>
-          <span className={z.is_active ? 'shipping-zone-active' : 'muted small'}>{z.is_active ? 'متاحة للطلبات' : 'غير مفعّلة'}</span>
+          <span className={z.is_active ? 'shipping-zone-active' : 'muted small'}>{z.is_active ? 'متاحة دائمًا' : 'مطلوب تشغيل تحديث SQL'}</span>
           <button className="btn outline compact" onClick={() => { setZone({...z}); setAreasText(z.areas.join('، ')); document.getElementById('shipping-zone-editor')?.scrollIntoView({behavior:'smooth',block:'center'}); }}>تعديل</button>
         </div>)}
       </div>
       {zone && <form id="shipping-zone-editor" className="form-grid shipping-zone-editor" onSubmit={async e => {
         e.preventDefault();
         setBusy(true);
-        try { await saveZone({...zone, areas: areasText.split(/[,،]/).map(part => part.trim()).filter(Boolean)}); setZone(null); await loadZones(); toast.success('تم حفظ سعر الشحن'); }
+        try { await saveZone({...zone, is_active: EGYPT_GOVERNORATES.includes(zone.governorate as (typeof EGYPT_GOVERNORATES)[number]) ? true : zone.is_active, areas: areasText.split(/[,،]/).map(part => part.trim()).filter(Boolean)}); setZone(null); await loadZones(); toast.success('تم حفظ سعر الشحن'); }
         catch (err) { setResult(explain(err)); toast.error(explain(err)); }
         finally { setBusy(false); }
       }}>
@@ -113,7 +113,7 @@ function Settings() {
         <label>المحافظة<select required value={zone.governorate || ''} onChange={e => setZone({ ...zone, governorate: e.target.value })}><option value="">اختر المحافظة</option>{[...new Set([...EGYPT_GOVERNORATES, ...zones.map(z => z.governorate)])].map(g => <option key={g} value={g}>{g}</option>)}</select></label>
         <label>السعر بالجنيه<input type="number" required min="0" step="0.01" value={(zone.fee_minor ?? 0) / 100} onChange={e => setZone({ ...zone, fee_minor: Math.round(Number(e.target.value) * 100) })}/></label>
         <label className="full">المناطق (اختياري — اتركها فارغة لو السعر موحد لكل المحافظة)<input value={areasText} onChange={e => setAreasText(e.target.value)}/></label>
-        <label className="check-label"><input type="checkbox" checked={!!zone.is_active} onChange={e => setZone({ ...zone, is_active: e.target.checked })}/>متاح للعملاء في صفحة الطلب</label>
+        {zone.governorate && EGYPT_GOVERNORATES.includes(zone.governorate as (typeof EGYPT_GOVERNORATES)[number]) ? <p className="full muted small">المحافظة متاحة للطلبات دائمًا؛ يمكنك تعديل سعرها ومناطقها فقط.</p> : <label className="check-label"><input type="checkbox" checked={!!zone.is_active} onChange={e => setZone({ ...zone, is_active: e.target.checked })}/>متاح للعملاء في صفحة الطلب</label>}
         <div className="button-row full"><button className="btn" disabled={busy}>حفظ المحافظة</button><button type="button" className="btn outline" onClick={() => setZone(null)}>إلغاء</button></div>
       </form>}
     </section>

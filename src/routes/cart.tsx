@@ -73,12 +73,13 @@ function Cart() {
   const fee = effectiveShippingFee(zone, promotion);
   const subtotal = rows.reduce((n, l) => n + (l.v?.price_minor || 0) * l.quantity, 0);
   const invalid = rows.some(l => !l.v || !l.p || l.v.status !== 'published' || l.quantity > l.v.stock_on_hand - l.v.stock_reserved);
-  const governorates = [...new Set([...EGYPT_GOVERNORATES, ...zones.map(z => z.governorate)])];
+  const governorates = EGYPT_GOVERNORATES;
 
   const chooseGovernorate = (value: string) => {
     setGovernorate(value);
     const options = zones.filter(z => z.governorate === value);
-    setZoneId(options.length === 1 ? options[0].id : '');
+    // Default to the unrestricted governorate-wide shipping zone, so every town is supported.
+    setZoneId(options.find(z => z.areas.length === 0)?.id || (options.length === 1 ? options[0].id : ''));
     setFailure('');
     idempotency.current = '';
   };
@@ -86,9 +87,19 @@ function Cart() {
   useEffect(() => {
     if (!governorate || !zones.length) return;
     const choices = zones.filter(z => z.governorate === governorate);
-    if (choices.length === 1 && zoneId !== choices[0].id) setZoneId(choices[0].id);
-    if (choices.length > 1 && zoneId && !choices.some(z => z.id === zoneId)) setZoneId('');
+    const defaultZoneId = choices.find(z => z.areas.length === 0)?.id || (choices.length === 1 ? choices[0].id : '');
+    if (defaultZoneId && (!zoneId || !choices.some(z => z.id === zoneId))) setZoneId(defaultZoneId);
   }, [governorate, zones, zoneId]);
+  // An area-specific price must match the customer's actual town exactly;
+  // otherwise silently fall back to the zone that serves the whole governorate.
+  useEffect(() => {
+    if (!zoneId || !governorate || !zones.length || !form.area.trim()) return;
+    const selected = zones.find(z => z.id === zoneId && z.governorate === governorate);
+    if (selected && selected.areas.length && !selected.areas.includes(form.area.trim())) {
+      const defaultZone = zones.find(z => z.governorate === governorate && z.areas.length === 0);
+      if (defaultZone) setZoneId(defaultZone.id);
+    }
+  }, [governorate, zoneId, zones, form.area]);
   // Contact saved before zone loading might refer to a deleted/inactive zone.
   useEffect(() => {
     if (governorate || !zoneId || !zones.length) return;
@@ -109,7 +120,8 @@ function Cart() {
     if (error || loading) return setFailure('تعذر تحميل بيانات السلة. أعد المحاولة.');
     if (!cart.lines.length) return setFailure('السلة فاضية؛ ضيف منتج الأول.');
     if (!governorate) return setFailure('اختار المحافظة عشان نعرف نوصل لك.');
-    if (!zone) return setFailure(availableZones.length ? 'اختار نطاق التوصيل.' : 'المحافظة دي مش متاحة للتوصيل حاليًا.');
+    if (!EGYPT_GOVERNORATES.includes(governorate as (typeof EGYPT_GOVERNORATES)[number])) return setFailure('اختار محافظة من القائمة.');
+    if (!zone) return setFailure(availableZones.length ? 'اختار نطاق التوصيل.' : 'تعذر تحميل سعر شحن المحافظة. حدّث الصفحة وحاول تاني.');
     if (invalid) return setFailure('في منتج أو كمية غير متاحة. ارجع راجع السلة.');
     if (shippingError) return setFailure('مش قادرين نتحقق من تكلفة الشحن حاليًا. حاول مرة تانية.');
     if (form.customer_name.trim().length < 2) return setFailure('اكتب اسمك بالكامل عشان نقدر نوصّل لك الطلب.');
@@ -206,9 +218,9 @@ function Cart() {
             <div className="form-grid">
               <label>الاسم بالكامل <span className="required-hint">*</span><input required autoComplete="name" placeholder="مثال: أحمد محمد" value={form.customer_name} onChange={e => changeField('customer_name',e.target.value)}/></label>
               <label>رقم الموبايل <span className="required-hint">*</span><input required inputMode="tel" autoComplete="tel" type="tel" dir="ltr" maxLength={18} placeholder="01XXXXXXXXX" value={form.customer_phone} onChange={e => changeField('customer_phone',e.target.value)}/></label>
-              <label>المحافظة <span className="required-hint">*</span><select required value={governorate} onChange={e=>chooseGovernorate(e.target.value)}><option value="">اختار محافظتك</option>{governorates.map(g => <option key={g} value={g}>{g}{!zones.some(z => z.governorate === g) ? ' (غير متاحة حاليًا)' : ''}</option>)}</select></label>
-              {governorate && availableZones.length > 1 && <label>نطاق التوصيل <span className="required-hint">*</span><select required value={zoneId} onChange={e => {setZoneId(e.target.value); setFailure(''); idempotency.current='';}}><option value="">اختار نطاق التوصيل</option>{availableZones.map(z => <option key={z.id} value={z.id}>{z.areas.length ? z.areas.join('، ') : 'كل أنحاء المحافظة'} — {promotion?.is_active ? 'شحن مجاني' : money(z.fee_minor)}</option>)}</select></label>}
-              {governorate && !availableZones.length && <p className="full notice info">التوصيل للمحافظة دي مش متاح حاليًا. اختار محافظة متاحة أو تواصل معانا قبل الطلب.</p>}
+              <label>المحافظة <span className="required-hint">*</span><select required value={governorate} onChange={e=>chooseGovernorate(e.target.value)}><option value="">اختار محافظتك</option>{governorates.map(g => <option key={g} value={g}>{g}</option>)}</select></label>
+              {governorate && availableZones.length > 1 && <label>نطاق التوصيل <span className="required-hint">*</span><select required value={zoneId} onChange={e => {setZoneId(e.target.value); setFailure(''); idempotency.current='';}}><option value="">اختار نطاق التوصيل</option>{availableZones.map(z => <option key={z.id} value={z.id}>{z.areas.length ? z.areas.join('، ') : 'كل أنحاء المحافظة'} — {promotion?.is_active || z.fee_minor === 0 ? 'شحن مجاني' : money(z.fee_minor)}</option>)}</select></label>}
+              {governorate && !availableZones.length && <p className="full notice info">بيانات الشحن لسه مش جاهزة. حدّث الصفحة؛ لو المشكلة مستمرة تواصل مع خدمة العملاء.</p>}
               <label>المدينة أو المنطقة <span className="required-hint">*</span><input required autoComplete="address-level3" placeholder="مثال: سموحة، أو مدينة نصر" value={form.area} onChange={e => changeField('area',e.target.value)}/></label>
               <label className="full">العنوان بالتفصيل <span className="required-hint">*</span><textarea required rows={2} autoComplete="street-address" placeholder="اسم الشارع، رقم العمارة، الدور، الشقة أو علامة مميزة" value={form.address} onChange={e => changeField('address',e.target.value)}/></label>
               <label className="full">ملاحظات للسائق (اختياري)<textarea rows={2} placeholder="مثال: اتصل قبل الوصول" value={form.customer_notes} onChange={e => changeField('customer_notes',e.target.value)}/></label>
@@ -223,8 +235,8 @@ function Cart() {
         {rows.map(l => <div key={l.variantId} className="summary-line"><span>{l.v?.title_override || l.p?.title_ar || 'غير متاح'} × {l.quantity}</span><b>{money((l.v?.price_minor || 0)*l.quantity)}</b></div>)}
         <hr/>
         <div className="summary-line"><span>المنتجات</span><b>{money(subtotal)}</b></div>
-        <div className="summary-line"><span><Truck size={16} className="inline-shipping-icon"/> الشحن</span><b>{zone ? promotion?.is_active ? <span className="free-shipping-label">{zone.fee_minor>0 && <del>{money(zone.fee_minor)}</del>} مجاني 🎉</span> : money(fee) : 'بعد اختيار المحافظة'}</b></div>
-        {promotion?.is_active && <p className="free-shipping-message">🎁 شحن مجاني لفترة محدودة على المحافظات المتاحة!</p>}
+        <div className="summary-line"><span><Truck size={16} className="inline-shipping-icon"/> الشحن</span><b>{zone ? promotion?.is_active || zone.fee_minor === 0 ? <span className="free-shipping-label">{zone.fee_minor>0 && <del>{money(zone.fee_minor)}</del>} مجاني 🎉</span> : money(fee) : 'بعد اختيار المحافظة'}</b></div>
+        {promotion?.is_active && <p className="free-shipping-message">🎁 شحن مجاني لفترة محدودة على كل المحافظات!</p>}
         <div className="summary-line grand"><span>{zone ? 'الإجمالي' : 'إجمالي المنتجات'}</span><b>{money(subtotal + fee)}</b></div>
         {stage === 0 && <p className="muted small">تكلفة الشحن هتظهر لما تختار محافظتك في الخطوة الجاية.</p>}
         {shippingError && <Notice>{shippingError}<button type="button" className="text-button" onClick={() => window.location.reload()}>تحديث</button></Notice>}
