@@ -1,7 +1,8 @@
 import { rememberedContact, rememberContact } from '@/lib/customer-contact';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useEffect, useState, useRef } from 'react';
-import { CheckCircle2, Trash2, ShoppingCart, ArrowLeft, MapPin, Truck, ShieldCheck } from 'lucide-react';
+import { useEffect, useLayoutEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { CheckCircle2, Trash2, ShoppingCart, ArrowLeft, ArrowRight, MapPin, Truck, ShieldCheck, X, UserRound, ClipboardCheck } from 'lucide-react';
 import { useCart } from '@/lib/cart';
 import { useCatalog, Notice, Picture, Quantity, Loading } from '@/components/StoreUI';
 import { shippingZones, shippingPromotion, effectiveShippingFee, placeOrder, explain, money, imageFor, type Zone, type ShippingPromotion, type Order } from '@/lib/commerce';
@@ -26,6 +27,14 @@ function Cart() {
   const [zoneId, setZoneId] = useState('');
   const [shippingError, setShippingError] = useState('');
   const [stage, setStage] = useState(Route.useSearch().checkout ? 1 : 0);
+  const [wizardStep, setWizardStep] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const wizardRef = useRef<HTMLDivElement | null>(null);
+  const wizardRootRef = useRef<HTMLDivElement | null>(null);
+  const wizardHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const wizardErrorRef = useRef<HTMLDivElement | null>(null);
+  const openButtonRef = useRef<HTMLButtonElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState('');
   const [result, setResult] = useState<Order | null>(null);
@@ -107,6 +116,84 @@ function Cart() {
     if (previousZone) setGovernorate(previousZone.governorate);
   }, [zones, governorate, zoneId]);
 
+  // The old inline second stage was below the scroll position on mobile and desktop.
+  // Lock the background page and focus the currently visible modal step instead.
+  useEffect(() => {
+    if (stage !== 1 || result) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [stage, result]);
+
+  useLayoutEffect(() => {
+    if (stage !== 1 || result || !mounted) return;
+    // Reset *before paint*, so the next step never appears below the previous scroll.
+    if (wizardRef.current) wizardRef.current.scrollTop = 0;
+    wizardHeadingRef.current?.focus({ preventScroll: true });
+  }, [stage, wizardStep, result, mounted]);
+
+  useEffect(() => {
+    if (stage !== 1 || !failure || result) return;
+    if (wizardRef.current) wizardRef.current.scrollTop = 0;
+    wizardErrorRef.current?.focus({ preventScroll: true });
+  }, [stage, failure, result]);
+
+  const closeWizard = () => {
+    if (busy) return;
+    setStage(0);
+    setFailure('');
+    window.requestAnimationFrame(() => openButtonRef.current?.focus({ preventScroll: true }));
+  };
+  useEffect(() => {
+    if (stage !== 1 || result) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (!busy) closeWizard();
+      }
+      if (event.key !== 'Tab') return;
+      const root = wizardRootRef.current;
+      if (!root) return;
+      const controls = [...root.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]')]
+        .filter(el => el.getClientRects().length > 0);
+      if (!controls.length) { event.preventDefault(); root.focus(); return; }
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !root.contains(document.activeElement))) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [stage, result, busy]);
+
+  const normalizedPhone = () => form.customer_phone.replace(/[٠-٩۰-۹]/g, c => String('٠١٢٣٤٥٦٧٨٩'.includes(c) ? '٠١٢٣٤٥٦٧٨٩'.indexOf(c) : '۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[\s()-]/g, '').replace(/^\+?20/, '0');
+  const contactError = () => {
+    if (form.customer_name.trim().length < 2) return 'اكتب اسمك بالكامل (حرفين على الأقل).';
+    if (!/^01[0125]\d{8}$/.test(normalizedPhone())) return 'رقم الموبايل لازم يكون 11 رقم ويبدأ بـ 01.';
+    return '';
+  };
+  const addressError = () => {
+    if (!governorate) return 'اختار محافظتك من القائمة.';
+    if (!EGYPT_GOVERNORATES.includes(governorate as (typeof EGYPT_GOVERNORATES)[number])) return 'اختار محافظة صحيحة من القائمة.';
+    if (!zone) return availableZones.length ? 'اختار نطاق التوصيل.' : 'مش قادرين نحمّل سعر شحن المحافظة. حدّث الصفحة وحاول تاني.';
+    if (!form.area.trim()) return 'اكتب اسم المدينة أو المنطقة.';
+    if (form.address.trim().length < 8) return 'اكتب العنوان بالتفصيل: الشارع ورقم العمارة أو علامة مميزة.';
+    return '';
+  };
+  const nextWizardStep = () => {
+    const message = wizardStep === 0 ? contactError() : wizardStep === 1 ? addressError() : '';
+    if (message) { setFailure(message); return; }
+    setFailure('');
+    setWizardStep(current => Math.min(2, current + 1));
+  };
+  const openWizard = () => {
+    setWizardStep(0);
+    setFailure('');
+    setStage(1);
+  };
+
   const changeField = (key: keyof typeof form, value: string) => {
     setForm(old => ({ ...old, [key]: value }));
     setFailure('');
@@ -124,11 +211,11 @@ function Cart() {
     if (!zone) return setFailure(availableZones.length ? 'اختار نطاق التوصيل.' : 'تعذر تحميل سعر شحن المحافظة. حدّث الصفحة وحاول تاني.');
     if (invalid) return setFailure('في منتج أو كمية غير متاحة. ارجع راجع السلة.');
     if (shippingError) return setFailure('مش قادرين نتحقق من تكلفة الشحن حاليًا. حاول مرة تانية.');
-    if (form.customer_name.trim().length < 2) return setFailure('اكتب اسمك بالكامل عشان نقدر نوصّل لك الطلب.');
-    const normalized = form.customer_phone.replace(/[٠-٩۰-۹]/g, c => String('٠١٢٣٤٥٦٧٨٩'.includes(c) ? '٠١٢٣٤٥٦٧٨٩'.indexOf(c) : '۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[\s()-]/g, '').replace(/^\+?20/, '0');
-    if (!/^01[0125]\d{8}$/.test(normalized)) return setFailure('رقم الموبايل لازم يكون 11 رقم ويبدأ بـ 01.');
-    if (!form.area.trim()) return setFailure('اكتب اسم منطقتك أو مدينتك.');
-    if (form.address.trim().length < 8) return setFailure('اكتب العنوان بالتفصيل: الشارع ورقم العمارة أو علامة مميزة.');
+    const contactProblem = contactError();
+    if (contactProblem) { setWizardStep(0); return setFailure(contactProblem); }
+    const addressProblem = addressError();
+    if (addressProblem) { setWizardStep(1); return setFailure(addressProblem); }
+    const normalized = normalizedPhone();
 
     submitting.current = true;
     setBusy(true);
@@ -184,6 +271,8 @@ function Cart() {
     } finally { submitting.current = false; setBusy(false); }
   };
 
+  useEffect(() => { if (result) window.scrollTo(0, 0); }, [result]);
+
   if (result) return <div className="wrap confirmation page">
     <CheckCircle2 size={60}/><h1>{copy('orderThanks')}</h1>
     <p>رقم طلبك <strong dir="ltr">{result.code}</strong></p>
@@ -200,52 +289,83 @@ function Cart() {
 
   if (!cart.ready || loading) return <div className="wrap page"><Loading/></div>;
   return <div className="wrap page homey-checkout">
-    <div className="checkout-steps" aria-label="خطوات الشراء"><span className={stage === 0 ? 'active' : ''}>١. السلة</span><span className={stage === 1 ? 'active' : ''}>٢. بيانات التوصيل</span><span>٣. تم الطلب</span></div>
-    <h1>{stage === 0 ? 'سلة مشترياتك' : 'فاضل خطوة ونأكد طلبك ✨'}</h1>
+    <div className="checkout-steps" aria-label="خطوات الشراء"><span className={stage === 0 ? 'active' : ''}>١. السلة</span><span className={stage === 1 ? 'active' : ''}>٢. تأكيد البيانات</span><span>٣. تم الطلب</span></div>
+    <h1>سلة مشترياتك</h1>
+    <p className="homey-cart-guide">راجع منتجاتك والإجمالي، وبعدها اضغط «متابعة الطلب» علشان نوصّلها لك.</p>
     {error && <Notice>{error}<button type="button" className="text-button" onClick={reload}>إعادة المحاولة</button></Notice>}
     {!cart.lines.length ? <div className="empty"><ShoppingCart size={50}/><h2>السلة لسه فاضية</h2><Link to="/products" className="btn">تسوّق المنتجات</Link></div> :
-    <div className="checkout-layout">
-      <div>
-        {stage === 0 ? <div className="cart-items">{rows.map(l => <article className="cart-item" key={l.variantId}>
-          <Picture src={l.p ? imageFor(l.p,l.v) : undefined} alt={l.p?.title_ar || 'منتج غير متاح'}/>
+      <div className="checkout-layout" aria-hidden={stage === 1 ? true : undefined}>
+        <div className="cart-items">{rows.map(l => <article className="cart-item" key={l.variantId}>
+          <Picture src={l.p ? imageFor(l.p, l.v) : undefined} alt={l.p?.title_ar || 'منتج غير متاح'}/>
           <div><h3>{l.v?.title_override || l.p?.title_ar || 'منتج غير متاح'}</h3><p className="muted">{Object.values(l.v?.options || {}).join(' / ')}</p><strong>{l.v ? money(l.v.price_minor) : 'غير متاح'}</strong>{l.v && l.quantity > l.v.stock_on_hand - l.v.stock_reserved && <p className="danger">الكمية المطلوبة مش متوفرة</p>}</div>
-          <Quantity value={l.quantity} max={Math.max(l.quantity,l.v ? l.v.stock_on_hand - l.v.stock_reserved : 1)} onChange={n => {cart.setQty(l.variantId,n); idempotency.current='';}}/>
-          <b>{money((l.v?.price_minor || 0)*l.quantity)}</b>
-          <button type="button" className="icon-button" aria-label="حذف المنتج من السلة" onClick={() => {cart.remove(l.variantId); idempotency.current='';}}><Trash2 size={18}/></button>
-        </article>)}</div> :
-          <form id="checkout-form" className="panel homey-checkout-form" noValidate onSubmit={submit}>
-            <div className="checkout-form-heading"><MapPin size={21}/><div><h2>فين نوصّل طلبك؟</h2><p className="muted small">املأ البيانات دي بس، مش محتاج تعمل حساب.</p></div></div>
-            <div className="form-grid">
-              <label>الاسم بالكامل <span className="required-hint">*</span><input required autoComplete="name" placeholder="مثال: أحمد محمد" value={form.customer_name} onChange={e => changeField('customer_name',e.target.value)}/></label>
-              <label>رقم الموبايل <span className="required-hint">*</span><input required inputMode="tel" autoComplete="tel" type="tel" dir="ltr" maxLength={18} placeholder="01XXXXXXXXX" value={form.customer_phone} onChange={e => changeField('customer_phone',e.target.value)}/></label>
-              <label>المحافظة <span className="required-hint">*</span><select required value={governorate} onChange={e=>chooseGovernorate(e.target.value)}><option value="">اختار محافظتك</option>{governorates.map(g => <option key={g} value={g}>{g}</option>)}</select></label>
-              {governorate && availableZones.length > 1 && <label>نطاق التوصيل <span className="required-hint">*</span><select required value={zoneId} onChange={e => {setZoneId(e.target.value); setFailure(''); idempotency.current='';}}><option value="">اختار نطاق التوصيل</option>{availableZones.map(z => <option key={z.id} value={z.id}>{z.areas.length ? z.areas.join('، ') : 'كل أنحاء المحافظة'} — {promotion?.is_active || z.fee_minor === 0 ? 'شحن مجاني' : money(z.fee_minor)}</option>)}</select></label>}
-              {governorate && !availableZones.length && <p className="full notice info">بيانات الشحن لسه مش جاهزة. حدّث الصفحة؛ لو المشكلة مستمرة تواصل مع خدمة العملاء.</p>}
-              <label>المدينة أو المنطقة <span className="required-hint">*</span><input required autoComplete="address-level3" placeholder="مثال: سموحة، أو مدينة نصر" value={form.area} onChange={e => changeField('area',e.target.value)}/></label>
-              <label className="full">العنوان بالتفصيل <span className="required-hint">*</span><textarea required rows={2} autoComplete="street-address" placeholder="اسم الشارع، رقم العمارة، الدور، الشقة أو علامة مميزة" value={form.address} onChange={e => changeField('address',e.target.value)}/></label>
-              <label className="full">ملاحظات للسائق (اختياري)<textarea rows={2} placeholder="مثال: اتصل قبل الوصول" value={form.customer_notes} onChange={e => changeField('customer_notes',e.target.value)}/></label>
-              <label className="full check-label checkout-remember"><input type="checkbox" checked={remember} onChange={e => {setRemember(e.target.checked); if (!e.target.checked) rememberContact(form,false);}}/>افتكر بياناتي على الجهاز ده للطلب الجاي</label>
-            </div>
-            <div className="checkout-payment-note"><ShieldCheck size={20}/><span><b>الدفع عند الاستلام</b><small>طلبك هيتسجل أولًا، وبعدها تقدر تبعت تأكيده على واتساب.</small></span></div>
-          </form>}
-        {stage === 1 && <button type="button" className="text-button" onClick={() => {setStage(0); setFailure('');}}>الرجوع للسلة وتعديل المنتجات</button>}
+          <Quantity value={l.quantity} max={Math.max(l.quantity, l.v ? l.v.stock_on_hand - l.v.stock_reserved : 1)} onChange={n => { cart.setQty(l.variantId, n); idempotency.current = ''; }}/>
+          <b>{money((l.v?.price_minor || 0) * l.quantity)}</b>
+          <button type="button" className="icon-button" aria-label="حذف المنتج من السلة" onClick={() => { cart.remove(l.variantId); idempotency.current = ''; }}><Trash2 size={18}/></button>
+        </article>)}</div>
+        <aside className="panel order-summary homey-order-summary">
+          <h2>ملخص الطلب</h2>
+          {rows.map(l => <div key={l.variantId} className="summary-line"><span>{l.v?.title_override || l.p?.title_ar || 'غير متاح'} × {l.quantity}</span><b>{money((l.v?.price_minor || 0) * l.quantity)}</b></div>)}
+          <hr/>
+          <div className="summary-line"><span>المنتجات</span><b>{money(subtotal)}</b></div>
+          <div className="summary-line"><span><Truck size={16} className="inline-shipping-icon"/> الشحن</span><b>{zone ? promotion?.is_active || zone.fee_minor === 0 ? <span className="free-shipping-label">مجاني 🎉</span> : money(fee) : 'بعد اختيار المحافظة'}</b></div>
+          <div className="summary-line grand"><span>{zone ? 'الإجمالي' : 'إجمالي المنتجات'}</span><b>{money(subtotal + fee)}</b></div>
+          <p className="muted small">هتشوف الشحن والإجمالي النهائي قبل تأكيد الطلب. مفيش رسوم مخفية.</p>
+          {invalid && <Notice>راجع المنتجات والكميات قبل إتمام الطلب.</Notice>}
+          <button ref={openButtonRef} type="button" className="btn checkout-primary-action" disabled={invalid || !!error || !!shippingError} onClick={openWizard}>متابعة الطلب <ArrowLeft size={18}/></button>
+          {shippingError && <Notice>{shippingError}<button type="button" className="text-button" onClick={() => window.location.reload()}>تحديث</button></Notice>}
+        </aside>
+      </div>}
+    {mounted && stage === 1 && cart.lines.length > 0 && createPortal(<div className="homey-checkout-wizard-overlay">
+      <div ref={wizardRootRef} className="homey-checkout-wizard" role="dialog" aria-modal="true" aria-labelledby="homey-wizard-heading" aria-describedby="homey-wizard-description" dir="rtl">
+        <div className="homey-wizard-top">
+          <div><p className="homey-wizard-eyebrow">طلبك مع هومي</p><h2 id="homey-wizard-heading" ref={wizardHeadingRef} tabIndex={-1}>{wizardStep === 0 ? 'نبدأ ببياناتك' : wizardStep === 1 ? 'فين نوصّل الطلب؟' : 'راجع طلبك وأكّده'}</h2>
+            <p id="homey-wizard-description">{wizardStep === 0 ? 'محتاجين اسمك ورقم موبايلك بس.' : wizardStep === 1 ? 'اكتب العنوان علشان الأوردر يوصل صح.' : 'اتأكد من الإجمالي والعنوان قبل التسجيل.'}</p></div>
+          <button type="button" className="homey-wizard-close" disabled={busy} onClick={closeWizard} aria-label="إغلاق خطوات الطلب والرجوع للسلة"><X size={21}/></button>
+        </div>
+        <div className="homey-wizard-progress" aria-label="تقدم تأكيد الطلب">
+          {['بياناتك', 'عنوانك', 'تأكيد الطلب'].map((label, index) => <div key={label} className={'homey-wizard-progress-step ' + (wizardStep === index ? 'current' : wizardStep > index ? 'done' : '')} aria-current={wizardStep === index ? 'step' : undefined}>
+            <span className="homey-wizard-progress-dot">{wizardStep > index ? <CheckCircle2 size={16}/> : index + 1}</span><span>{label}</span>
+          </div>)}
+        </div>
+        <div ref={wizardRef} className="homey-checkout-wizard-body" tabIndex={-1}>
+          {failure && <div ref={wizardErrorRef} className="homey-wizard-error" role="alert" tabIndex={-1}>{failure}</div>}
+          <form id="checkout-form" noValidate onSubmit={e => { e.preventDefault(); if (wizardStep < 2) nextWizardStep(); else void submit(e); }}>
+            {wizardStep === 0 && <div className="homey-wizard-fields">
+              <div className="homey-wizard-step-note"><UserRound size={19}/><span>مش محتاج تعمل حساب أو باسورد.</span></div>
+              <label htmlFor="homey-customer-name">اسمك بالكامل <span className="required-hint">*</span><input id="homey-customer-name" required autoComplete="name" placeholder="مثال: أحمد محمد" value={form.customer_name} onChange={e => changeField('customer_name', e.target.value)}/></label>
+              <label htmlFor="homey-customer-phone">رقم الموبايل <span className="required-hint">*</span><input id="homey-customer-phone" required inputMode="tel" autoComplete="tel" type="tel" dir="ltr" maxLength={18} placeholder="01XXXXXXXXX" value={form.customer_phone} onChange={e => changeField('customer_phone', e.target.value)}/></label>
+              <p className="homey-wizard-help">هنستخدم الرقم لتأكيد الطلب والتواصل معاك بخصوص التوصيل بس.</p>
+            </div>}
+            {wizardStep === 1 && <div className="homey-wizard-fields">
+              <div className="homey-wizard-step-note"><MapPin size={19}/><span>كل محافظات مصر متاحة للتوصيل.</span></div>
+              <label htmlFor="homey-governorate">المحافظة <span className="required-hint">*</span><select id="homey-governorate" required value={governorate} onChange={e => chooseGovernorate(e.target.value)}><option value="">اختار محافظتك</option>{governorates.map(g => <option key={g} value={g}>{g}</option>)}</select></label>
+              {governorate && availableZones.length > 1 && <label htmlFor="homey-zone">نطاق التوصيل <span className="required-hint">*</span><select id="homey-zone" required value={zoneId} onChange={e => { setZoneId(e.target.value); setFailure(''); idempotency.current = ''; }}><option value="">اختار نطاق التوصيل</option>{availableZones.map(z => <option key={z.id} value={z.id}>{z.areas.length ? z.areas.join('، ') : 'كل أنحاء المحافظة'} — {promotion?.is_active || z.fee_minor === 0 ? 'شحن مجاني' : money(z.fee_minor)}</option>)}</select></label>}
+              {governorate && !availableZones.length && <p className="notice info">تعذر تحميل سعر الشحن. حدّث الصفحة وحاول تاني.</p>}
+              <label htmlFor="homey-area">المدينة أو المنطقة <span className="required-hint">*</span><input id="homey-area" required autoComplete="address-level3" placeholder="مثال: سموحة أو مدينة نصر" value={form.area} onChange={e => changeField('area', e.target.value)}/></label>
+              <label htmlFor="homey-address">العنوان بالتفصيل <span className="required-hint">*</span><textarea id="homey-address" required rows={2} autoComplete="street-address" placeholder="اسم الشارع ورقم العمارة والدور والشقة" value={form.address} onChange={e => changeField('address', e.target.value)}/></label>
+              {zone && <div className="homey-wizard-shipping"><Truck size={18}/><span>تكلفة الشحن إلى {governorate}</span><strong>{promotion?.is_active || zone.fee_minor === 0 ? 'مجاني' : money(fee)}</strong></div>}
+            </div>}
+            {wizardStep === 2 && <div className="homey-wizard-review">
+              <div className="homey-wizard-step-note"><ClipboardCheck size={20}/><span>راجع التفاصيل دي، وممكن ترجع تعدل أي حاجة.</span></div>
+              <div className="homey-wizard-review-block"><strong>بيانات التوصيل</strong><p>{form.customer_name.trim()} — <span dir="ltr">{normalizedPhone()}</span></p><p>{governorate}، {form.area.trim()}، {form.address.trim()}</p><button className="text-button" type="button" disabled={busy} onClick={() => { setFailure(''); setWizardStep(1); }}>تعديل العنوان</button></div>
+              <div className="homey-wizard-review-block"><strong>ملخص المنتجات</strong>
+                {rows.map(l => <div className="homey-wizard-review-line" key={l.variantId}><span>{l.v?.title_override || l.p?.title_ar || 'منتج'} × {l.quantity}</span><b>{money((l.v?.price_minor || 0) * l.quantity)}</b></div>)}
+                <div className="homey-wizard-review-line"><span>المنتجات</span><b>{money(subtotal)}</b></div>
+                <div className="homey-wizard-review-line"><span>التوصيل</span><b>{zone ? (promotion?.is_active || zone.fee_minor === 0 ? 'مجاني' : money(fee)) : 'غير محدد'}</b></div>
+                <div className="homey-wizard-review-line homey-wizard-total"><span>الإجمالي النهائي</span><b>{money(subtotal + fee)}</b></div>
+              </div>
+              <label htmlFor="homey-notes">ملاحظات للمندوب (اختياري)<textarea id="homey-notes" rows={2} placeholder="مثال: اتصل قبل الوصول" value={form.customer_notes} onChange={e => changeField('customer_notes', e.target.value)}/></label>
+              <label className="check-label homey-wizard-remember"><input type="checkbox" checked={remember} onChange={e => { setRemember(e.target.checked); if (!e.target.checked) rememberContact(form, false); }}/>افتكر بياناتي على الجهاز ده للطلب الجاي</label>
+              <div className="checkout-payment-note"><ShieldCheck size={21}/><span><b>الدفع عند الاستلام</b><small>طلبك هيتسجل في المتجر، وبعدها تقدر تأكده على واتساب.</small></span></div>
+            </div>}
+          </form>
+        </div>
+        <div className="homey-wizard-actions">
+          {wizardStep === 0 ? <button type="button" className="btn outline homey-wizard-secondary" disabled={busy} onClick={closeWizard}>رجوع للسلة</button> : <button type="button" className="btn outline homey-wizard-secondary" disabled={busy} onClick={() => { setFailure(''); setWizardStep(s => s - 1); }}><ArrowRight size={16}/> السابق</button>}
+          {wizardStep < 2 ? <button type="button" className="btn homey-wizard-next" disabled={busy || invalid} onClick={nextWizardStep}>التالي <ArrowLeft size={18}/></button> : <button type="submit" form="checkout-form" className="btn homey-wizard-next" disabled={busy || invalid || !!error || !!shippingError}>{busy ? 'بنحفظ طلبك...' : `تأكيد الطلب — ${money(subtotal + fee)}`}{!busy && <CheckCircle2 size={18}/>}</button>}
+        </div>
+        <p className="homey-wizard-footer-note">{wizardStep + 1} من 3 · تقدر ترجع وتغيّر بياناتك في أي وقت قبل التأكيد.</p>
       </div>
-      <aside className="panel order-summary homey-order-summary">
-        <h2>ملخص الطلب</h2>
-        {rows.map(l => <div key={l.variantId} className="summary-line"><span>{l.v?.title_override || l.p?.title_ar || 'غير متاح'} × {l.quantity}</span><b>{money((l.v?.price_minor || 0)*l.quantity)}</b></div>)}
-        <hr/>
-        <div className="summary-line"><span>المنتجات</span><b>{money(subtotal)}</b></div>
-        <div className="summary-line"><span><Truck size={16} className="inline-shipping-icon"/> الشحن</span><b>{zone ? promotion?.is_active || zone.fee_minor === 0 ? <span className="free-shipping-label">{zone.fee_minor>0 && <del>{money(zone.fee_minor)}</del>} مجاني 🎉</span> : money(fee) : 'بعد اختيار المحافظة'}</b></div>
-        {promotion?.is_active && <p className="free-shipping-message">🎁 شحن مجاني لفترة محدودة على كل المحافظات!</p>}
-        <div className="summary-line grand"><span>{zone ? 'الإجمالي' : 'إجمالي المنتجات'}</span><b>{money(subtotal + fee)}</b></div>
-        {stage === 0 && <p className="muted small">تكلفة الشحن هتظهر لما تختار محافظتك في الخطوة الجاية.</p>}
-        {shippingError && <Notice>{shippingError}<button type="button" className="text-button" onClick={() => window.location.reload()}>تحديث</button></Notice>}
-        {invalid && <Notice>راجع المنتجات والكميات قبل إتمام الطلب.</Notice>}
-        {failure && <div className="notice" role="alert" aria-live="assertive">{failure}</div>}
-        {stage === 0 ? <button type="button" className="btn checkout-primary-action" disabled={invalid || !!error} onClick={() => setStage(1)}>متابعة لبيانات التوصيل <ArrowLeft size={17}/></button> :
-          <button type="submit" form="checkout-form" className="btn checkout-primary-action" disabled={busy || invalid || !!error}>{busy ? 'جاري تسجيل طلبك...' : 'تأكيد الطلب الآن'}</button>}
-        {stage === 1 && <p className="small muted">بالضغط على «تأكيد الطلب»، هيتم حفظ الطلب في المتجر. بعد كده يفتح واتساب لو متاح.</p>}
-      </aside>
-    </div>}
+    </div>, document.body)}
   </div>;
 }

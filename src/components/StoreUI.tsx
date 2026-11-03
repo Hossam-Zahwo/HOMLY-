@@ -1,6 +1,6 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { catalog, explain, money, imageFor, assetUrl, type Catalog, type Product, type Variant } from '@/lib/commerce';
 import { useCart } from '@/lib/cart';
 import { configured } from '@/lib/supabase';
@@ -27,7 +27,77 @@ export function Loading() { return <div className="product-grid">{Array.from({ l
 export function Empty({ text }: {
     text?: string;
 }) { const copy = useCopy(); return <div className="empty"><PackageCheck /><p>{text || copy('emptyProducts', 'لا توجد منتجات منشورة في هذا القسم بعد.')}</p><Link to="/products" className="btn outline">استكشف المنتجات</Link></div>; }
-export function Header() { const { categories } = useCatalog(); const { config, preview, error } = useSite(); const { lines } = useCart(); const [open, setOpen] = useState(false); const [q, setQ] = useState(''); const location = useLocation(); useEffect(() => setOpen(false), [location.pathname]); const cats = categories.length ? categories : ([]); return <>{config.header.announcement && <div className="announcement">{config.header.announcement}</div>}<header className="store-header"><div className="header-main wrap"><button className="icon-button mobile-menu" aria-label="فتح القائمة" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button><Logo />{config.header.showSearch && <form className="search" action="/products"><Search size={18}/><input name="q" aria-label="ابحث عن منتج" placeholder={config.header.searchPlaceholder} value={q} onChange={e => setQ(e.target.value)}/></form>}<div className="header-actions">{config.header.showOrders && <Link to="/orders" className="account-link">طلباتي</Link>}<Link to="/cart" search={{ checkout: false }} className="cart-link" aria-label="سلة التسوق"><ShoppingCart size={24}/><span>{lines.reduce((n, l) => n + l.quantity, 0)}</span></Link></div></div><nav className={'store-nav ' + (open ? 'is-open' : '')} aria-label="أقسام المتجر">{config.header.links.filter(l => l.visible).map(l => <a href={safeHref(l.href)} key={l.id}>{l.label}</a>)}{config.header.showCategories && cats.map(c => <Link key={c.id} to="/category/$slug" params={{ slug: c.slug }}>{c.name_ar}</Link>)}</nav></header><ModeNotice />{preview && <div className="mode-notice">معاينة مسودة للإدارة فقط — المحتوى ده لسه مش منشور للعملاء.</div>}{error && <div className="mode-notice warning">{error}</div>}</>; }
+export function Header() {
+    const { categories } = useCatalog();
+    const { config, preview, error } = useSite();
+    const { lines } = useCart();
+    const [open, setOpen] = useState(false);
+    const [q, setQ] = useState('');
+    const [cartPulse, setCartPulse] = useState(0);
+    const [addedQuantity, setAddedQuantity] = useState(1);
+    const headerRef = useRef<HTMLElement | null>(null);
+    const location = useLocation();
+    const count = lines.reduce((n, l) => n + l.quantity, 0);
+    const cats = categories.length ? categories : [];
+
+    useEffect(() => setOpen(false), [location.pathname]);
+    // Keep anchored navigation visible beneath the sticky header, even as its
+    // dimensions change between desktop, mobile, and storefront configurations.
+    useEffect(() => {
+        const header = headerRef.current;
+        if (!header) return;
+        const updateOffset = () => document.documentElement.style.setProperty('--homey-header-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+        updateOffset();
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateOffset) : null;
+        observer?.observe(header);
+        window.addEventListener('resize', updateOffset);
+        return () => {
+            observer?.disconnect();
+            window.removeEventListener('resize', updateOffset);
+            document.documentElement.style.removeProperty('--homey-header-height');
+        };
+    }, []);
+    useEffect(() => {
+        const animate = (event: Event) => {
+            const quantity = (event as CustomEvent<{quantity?: number}>).detail?.quantity;
+            setAddedQuantity(Number.isFinite(quantity) && Number(quantity) > 0 ? Number(quantity) : 1);
+            setCartPulse(previous => previous + 1);
+        };
+        window.addEventListener('homey:cart-added', animate);
+        return () => window.removeEventListener('homey:cart-added', animate);
+    }, []);
+    useEffect(() => {
+        if (!cartPulse) return;
+        const timer = window.setTimeout(() => setCartPulse(0), 1600);
+        return () => window.clearTimeout(timer);
+    }, [cartPulse]);
+
+    return <>
+        {config.header.announcement && <div className="announcement">{config.header.announcement}</div>}
+        <header ref={headerRef} className="store-header">
+            <div className="header-main wrap">
+                <button type="button" className="icon-button mobile-menu" aria-label={open ? 'إغلاق القائمة' : 'فتح القائمة'} aria-expanded={open} aria-controls="homey-store-nav" onClick={() => setOpen(current => !current)}>{open ? <X/> : <Menu/>}</button>
+                <Logo/>
+                {config.header.showSearch && <form className="search" action="/products"><Search size={18}/><input name="q" aria-label="ابحث عن منتج" placeholder={config.header.searchPlaceholder} value={q} onChange={e => setQ(e.target.value)}/></form>}
+                <div className="header-actions">
+                    {config.header.showOrders && <Link to="/orders" className="account-link">طلباتي</Link>}
+                    <Link to="/cart" search={{ checkout: false }} className="cart-link homey-cart-action" aria-label={`سلة التسوق، ${count} ${count === 1 ? 'منتج' : 'منتجات'}`}>
+                        <ShoppingCart size={24}/>
+                        {count > 0 && <span key={`cart-counter-${cartPulse}`} className={'homey-cart-count' + (cartPulse ? ' homey-cart-count-bump' : '')} aria-hidden="true">{count > 99 ? '99+' : count}</span>}
+                        {cartPulse > 0 && <span key={`cart-feedback-${cartPulse}`} className="homey-cart-added-pop" role="status">+{addedQuantity} اتضاف للسلة ✓</span>}
+                    </Link>
+                </div>
+            </div>
+            <nav id="homey-store-nav" className={'store-nav ' + (open ? 'is-open' : '')} aria-label="أقسام المتجر">
+                {config.header.links.filter(l => l.visible).map(l => <a href={safeHref(l.href)} key={l.id}>{l.label}</a>)}
+                {config.header.showCategories && cats.map(c => <Link key={c.id} to="/category/$slug" params={{ slug: c.slug }}>{c.name_ar}</Link>)}
+            </nav>
+        </header>
+        <ModeNotice/>
+        {preview && <div className="mode-notice">معاينة مسودة للإدارة فقط — المحتوى ده لسه مش منشور للعملاء.</div>}
+        {error && <div className="mode-notice warning">{error}</div>}
+    </>;
+}
 export function Footer() { const { config } = useSite(); const wa = config.whatsapp.enabled ? whatsappHref(config.whatsapp.number, 'أهلًا، محتاج مساعدة من ' + config.brand.name) : ''; const socialLinks=[{label:'إنستجرام',url:'https://www.instagram.com/homeyegypt.ecom/',icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="18" cy="6" r="1" fill="currentColor" stroke="none"/></svg>},{label:'فيسبوك',url:'https://www.facebook.com/share/1EAXrafo9m/',icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.25.2 2.25.2v2.47H15.2c-1.24 0-1.63.77-1.63 1.56V12h2.77l-.44 2.89h-2.33v6.99A10 10 0 0 0 22 12Z"/></svg>}]; return <><footer className="store-footer"><div className="wrap footer-grid"><div><Logo /><p className="preserve-lines">{config.footer.description}</p></div>{config.footer.columns.map(c => <div key={c.id}><h3>{c.title}</h3>{c.links.filter(l => l.visible).map(l => <a href={safeHref(l.href)} key={l.id}>{l.label}</a>)}</div>)}<div><h3>تابعنا</h3><div className="homey-social-icons">{socialLinks.map(l=><a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer" aria-label={l.label} title={l.label}>{l.icon}</a>)}</div><a className="homey-policy-link" href="/page/returns-policy">سياسة الاسترجاع والاستبدال</a></div></div><div className="footer-bottom">© {new Date().getFullYear()} — {config.footer.copyright}</div></footer>{wa && config.whatsapp.showFloating && <a className="floating-whatsapp homey-whatsapp-icon" href={wa} target="_blank" rel="noopener noreferrer" aria-label="التواصل عبر واتساب" title="تواصل معنا على واتساب"><svg width="29" height="29" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 .8A15.1 15.1 0 0 0 3 23.6L.9 31l7.6-2A15.2 15.2 0 1 0 16 .8Zm0 27.6a12.3 12.3 0 0 1-6.3-1.7l-.5-.3-4.5 1.2 1.2-4.4-.3-.5A12.3 12.3 0 1 1 16 28.4Zm6.8-9.2c-.4-.2-2.2-1.1-2.5-1.2-.3-.1-.5-.2-.7.2-.2.4-.9 1.2-1.1 1.4-.2.2-.4.3-.8.1-.4-.2-1.6-.6-3-1.9-1.1-1-1.9-2.2-2.1-2.6-.2-.4 0-.6.2-.8l.6-.7.4-.6c.1-.2.1-.5 0-.7l-1.1-2.6c-.3-.7-.6-.6-.8-.6h-.7c-.3 0-.7.1-1 .5-.4.4-1.3 1.3-1.3 3.1s1.3 3.6 1.5 3.8c.2.2 2.6 4 6.3 5.5.9.4 1.6.6 2.2.7.9.3 1.8.2 2.5.1.8-.1 2.2-.9 2.5-1.8.3-.9.3-1.7.2-1.8-.1-.2-.3-.3-.7-.5Z"/></svg></a>}</>; }
 export function Section({ title, to = '/products', children, showAction = true, actionLabel = 'عرض الكل' }: {
     title: string;

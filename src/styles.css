@@ -943,3 +943,199 @@ html,body,#root{max-width:100%;overflow-x:clip}
   .admin-shell .admin-content,
   .admin-shell .admin-sidebar .admin-nav-link { transition: none; }
 }
+
+/* HOMEY checkout wizard 2026-11-03: predictable, focused checkout for all ages. */
+.homey-cart-guide{color:var(--muted);font-size:14px;margin:0 0 18px}
+.homey-checkout-wizard-overlay{
+  position:fixed;inset:0;z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(24,32,25,.69);backdrop-filter:blur(4px);
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+}
+.homey-checkout-wizard{
+  width:min(590px,100%);max-height:calc(100dvh - 24px);min-height:0;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:#fff;border:1px solid #e3e8df;border-radius:20px;
+  box-shadow:0 24px 96px rgba(10,20,10,.28);text-align:right;color:#323931;
+}
+.homey-wizard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:22px 24px 16px}
+.homey-wizard-top h2{font-size:23px;line-height:1.5;margin:0 0 4px}
+.homey-wizard-top h2:focus{outline:none}
+.homey-wizard-top p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+.homey-wizard-top .homey-wizard-eyebrow{color:var(--sage);font-weight:800;font-size:12px;margin-bottom:3px}
+.homey-wizard-close{flex:0 0 42px;display:grid;place-items:center;width:42px;height:42px;background:#f3f5f1;border-radius:11px;color:#465544}
+.homey-wizard-close:hover{background:#e6ece2}
+.homey-wizard-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:5px 24px 16px;gap:10px;border-bottom:1px solid #e8ebe6}
+.homey-wizard-progress-step{display:flex;align-items:center;gap:7px;min-width:0;color:#858d83;font-size:12px;font-weight:650;white-space:nowrap}
+.homey-wizard-progress-dot{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border:1px solid #d8ded6;border-radius:50%;background:#f4f5f3;font-size:13px}
+.homey-wizard-progress-step.current{color:#344a32;font-weight:800}
+.homey-wizard-progress-step.current .homey-wizard-progress-dot{color:#fff;background:var(--sage);border-color:var(--sage)}
+.homey-wizard-progress-step.done{color:#3d6743}
+.homey-wizard-progress-step.done .homey-wizard-progress-dot{background:#e8f1e6;border-color:#b7cfb4}
+.homey-checkout-wizard-body{overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:20px 24px 14px;scrollbar-gutter:stable}
+.homey-checkout-wizard-body:focus{outline:none}
+.homey-checkout-wizard-body form{margin:0}
+.homey-wizard-fields,.homey-wizard-review{display:grid;gap:16px}
+.homey-wizard-fields label,.homey-wizard-review label{font-size:15px;font-weight:700;gap:7px}
+.homey-wizard-fields input,.homey-wizard-fields select,.homey-wizard-fields textarea,.homey-wizard-review textarea{font-size:16px;min-height:51px;border:1px solid #d6ddd2;border-radius:11px;padding:11px 13px;background:#fff}
+.homey-wizard-fields textarea,.homey-wizard-review textarea{min-height:85px}
+.homey-wizard-step-note{display:flex;align-items:center;gap:10px;background:#eff4ec;color:#446243;border-radius:12px;padding:11px 13px;font-size:13px;font-weight:600;line-height:1.8}
+.homey-wizard-step-note svg{flex-shrink:0}
+.homey-wizard-help{font-size:12px;color:var(--muted);margin:0;line-height:1.8}
+.homey-wizard-shipping{display:flex;align-items:center;gap:9px;background:#f6f8f3;padding:14px;border-radius:11px;font-size:13px;flex-wrap:wrap}
+.homey-wizard-shipping svg{color:#536d51;flex-shrink:0}
+.homey-wizard-shipping strong{margin-inline-start:auto;color:#314f30;font-size:16px}
+.homey-wizard-error{color:#933c2e;background:#fff0ea;border:1px solid #e6b9ac;border-radius:10px;padding:12px 14px;margin-bottom:15px;font-size:13px;font-weight:700;line-height:1.8}
+.homey-wizard-review-block{border:1px solid #e5e9e3;border-radius:12px;padding:14px 15px;background:#fcfdfa}
+.homey-wizard-review-block>strong{display:block;font-size:15px;margin-bottom:8px;color:#354734}
+.homey-wizard-review-block>p{font-size:13px;line-height:1.8;margin:4px 0;overflow-wrap:anywhere}
+.homey-wizard-review-block>.text-button{padding:8px 0 0}
+.homey-wizard-review-line{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;border-bottom:1px solid #e9ede6;padding:9px 0;font-size:13px}
+.homey-wizard-review-line span{min-width:0;overflow-wrap:anywhere}
+.homey-wizard-review-line b{white-space:nowrap}
+.homey-wizard-review-line:last-child{border:0}
+.homey-wizard-review-line.homey-wizard-total{font-size:17px;color:#2e5134;font-weight:800}
+.homey-wizard-remember{flex-direction:row!important;align-items:center;gap:10px;font-size:13px!important;font-weight:500!important;margin:0}
+.homey-wizard-remember input{flex:none;min-height:18px!important;width:18px;height:18px}
+.homey-wizard-review .checkout-payment-note{margin:0}
+.homey-wizard-actions{display:flex;gap:10px;border-top:1px solid #e9ede7;padding:15px 24px 6px;background:#fff}
+.homey-wizard-actions .btn{min-height:52px;font-size:15px;border-radius:11px;line-height:1.4}
+.homey-wizard-secondary{flex:0 0 auto;padding-inline:16px!important}
+.homey-wizard-next{flex:1;min-width:0;padding:10px 12px;white-space:normal}
+.homey-wizard-footer-note{color:#798678;font-size:11px;line-height:1.6;margin:0;padding:2px 24px 14px;text-align:center;background:#fff}
+@media(max-width:640px){
+  .homey-checkout-wizard-overlay{padding:8px}
+  .homey-checkout-wizard{width:100%;max-height:calc(100dvh - 16px);border-radius:17px}
+  .homey-wizard-top{padding:17px 16px 12px}
+  .homey-wizard-top h2{font-size:20px}
+  .homey-wizard-top p{font-size:12px}
+  .homey-wizard-progress{padding:3px 16px 12px;gap:4px}
+  .homey-wizard-progress-step{font-size:10px;gap:5px}
+  .homey-wizard-progress-dot{width:23px;height:23px;flex-basis:23px}
+  .homey-checkout-wizard-body{padding:15px 15px 12px;scrollbar-gutter:auto}
+  .homey-wizard-fields,.homey-wizard-review{gap:13px}
+  .homey-wizard-actions{padding:11px 15px 5px;gap:8px}
+  .homey-wizard-actions .btn{font-size:13px;min-height:50px}
+  .homey-wizard-secondary{padding-inline:10px!important}
+  .homey-wizard-footer-note{padding:1px 15px 10px;font-size:10px}
+  .homey-cart-guide{font-size:13px}
+}
+@media(max-width:360px){
+  .homey-wizard-progress-step{font-size:9px}
+  .homey-wizard-progress-dot{width:21px;height:21px;flex-basis:21px}
+  .homey-wizard-progress{gap:2px}
+}
+@media(prefers-reduced-motion:reduce){.homey-checkout-wizard *{scroll-behavior:auto!important;transition:none!important}}
+
+
+/* HOMEY customer UX: keep storefront navigation visible on EVERY screen size. */
+.store-header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  width: 100%;
+  isolation: isolate;
+  box-shadow: 0 3px 14px rgba(28, 41, 28, .065);
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+}
+html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
+[id] { scroll-margin-top: calc(var(--homey-header-height, 110px) + 14px); }
+/* The cart is a primary call to action; red is reserved for a filled cart. */
+.cart-link.homey-cart-action {
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 7px;
+  border-radius: 12px;
+  overflow: visible;
+  transition: background .18s ease, transform .18s ease;
+}
+.cart-link.homey-cart-action:hover { background: #f2f5ef; }
+.cart-link.homey-cart-action .homey-cart-count {
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  min-width: 23px;
+  height: 23px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #d62835;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 9px rgba(174, 33, 44, .3);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.cart-link .homey-cart-count.homey-cart-count-bump { animation: homey-cart-badge-pop .62s cubic-bezier(.2,.9,.25,1.2) both; }
+.cart-link .homey-cart-added-pop {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 7px);
+  z-index: 96;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid #d8e5d4;
+  border-radius: 12px;
+  background: #fff;
+  color: #2f6437;
+  box-shadow: 0 10px 24px rgba(21, 50, 25, .16);
+  font-size: 12px;
+  font-weight: 750;
+  pointer-events: none;
+  animation: homey-cart-added-arrive 1.6s ease both;
+}
+@keyframes homey-cart-badge-pop {
+  0% { transform: scale(.5); opacity: .45; }
+  38% { transform: scale(1.38); opacity: 1; }
+  69% { transform: scale(.91); }
+  100% { transform: scale(1); }
+}
+@keyframes homey-cart-added-arrive {
+  0% { opacity: 0; transform: translateY(-9px) scale(.94); }
+  15%, 76% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-5px) scale(.985); }
+}
+/* Mobile category menu overlays content; expanding it cannot push the page. */
+@media (max-width: 767px) {
+  .store-header { position: sticky; top: 0; z-index: 90; }
+  .store-header .store-nav.is-open {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    max-height: min(65dvh, 430px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #fff;
+    box-shadow: 0 14px 32px rgba(35, 47, 31, .13);
+    border-bottom: 1px solid #e3e8e0;
+  }
+  .cart-link.homey-cart-action .homey-cart-count { top: -2px; right: -4px; }
+}
+/* Independently portaled checkout: the visible step always starts at the top. */
+.homey-checkout-wizard-overlay { z-index: 1200; animation: homey-wizard-shade-enter .2s ease-out both; }
+.homey-checkout-wizard { animation: homey-wizard-card-enter .23s cubic-bezier(.19,.8,.27,1) both; }
+.homey-wizard-fields, .homey-wizard-review { animation: homey-wizard-step-enter .19s ease-out both; }
+@keyframes homey-wizard-shade-enter { from {opacity:0} to {opacity:1} }
+@keyframes homey-wizard-card-enter { from {opacity:.7; transform:translateY(14px) scale(.985)} to {opacity:1; transform:translateY(0) scale(1)} }
+@keyframes homey-wizard-step-enter { from {opacity:.65; transform:translateY(5px)} to {opacity:1; transform:translateY(0)} }
+@media (prefers-reduced-motion:reduce) {
+  .cart-link .homey-cart-count.homey-cart-count-bump,
+  .cart-link .homey-cart-added-pop,
+  .homey-checkout-wizard-overlay,
+  .homey-checkout-wizard,
+  .homey-wizard-fields,
+  .homey-wizard-review {animation:none !important;transition:none !important;}
+}
