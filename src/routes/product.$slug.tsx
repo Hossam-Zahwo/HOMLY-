@@ -1,6 +1,6 @@
 import {createFileRoute,Link,useNavigate} from '@tanstack/react-router';
 import {useEffect,useState} from 'react';
-import {ShoppingCart,Check,ChevronLeft,ChevronRight} from 'lucide-react';
+import {ShoppingCart,Check,ChevronLeft,ChevronRight,Zap} from 'lucide-react';
 import {toast} from 'sonner';
 import {useCatalog,Picture,Notice,Loading,ProductCard,Section,Quantity,TrustStrip} from '@/components/StoreUI';
 import {imageFor,money,cards} from '@/lib/commerce';
@@ -65,6 +65,10 @@ function ProductPage() {
     add(v.id, qty);
     toast.success('اتضاف للسلة ✓', { duration: 850, className: 'homey-cart-toast' });
   };
+  const buyNow = () => {
+    if (available < qty) return;
+    void navigate({ to: '/cart', search: { checkout: true, buyNow: v.id, qty } });
+  };
 
   return <>
     <div className="wrap page product-page">
@@ -99,8 +103,13 @@ function ProductPage() {
             </Link>)}</div>
           </div>}
           <p className="muted sku">رمز المنتج: <span dir="ltr">{v.sku}</span></p>
-          <div className="buy-actions"><Quantity value={qty} max={Math.max(1, available)} onChange={setQty} /><button className="btn" disabled={available < qty} onClick={addItem}><ShoppingCart size={19} />{copy('productAdd')}</button></div>
-          <button className="btn outline buy-now" disabled={available < qty} onClick={() => { addItem(); void navigate({ to: '/cart', search: { checkout: true } }); }}>{copy('productBuy')}</button>
+          <div className="buy-actions homey-detail-buy-actions">
+            <Quantity value={qty} max={Math.max(1, Math.min(999, available))} onChange={setQty} />
+            <div className="homey-detail-cta-pair">
+              <button type="button" className="btn" disabled={available < qty} onClick={addItem}><ShoppingCart size={18}/>{copy('productAdd')}</button>
+              <button type="button" className="btn homey-btn-buy-now" disabled={available < qty} onClick={buyNow}><Zap size={18}/>اطلب الآن</button>
+            </div>
+          </div>
           <p className="muted small">تكلفة الشحن تظهر بعد اختيار منطقة التوصيل في السلة.</p>
         </div>
       </div>
@@ -113,6 +122,12 @@ function ProductPage() {
     {related.length > 0 && <Section title={copy('related')}><div className="product-grid">{related.map((x) => <ProductCard key={x.v.id} {...x} />)}</div></Section>}
     <PublicReviews productId={p.id} title={copy('reviewsTitle')} />
     <TrustStrip />
-    <div className="mobile-buy-bar"><strong>{money(v.price_minor)}</strong><button disabled={available < qty} className="btn" onClick={addItem}>{copy('productAdd')}</button></div>
+    <div className="mobile-buy-bar homey-mobile-direct-bar">
+      <strong>{money(v.price_minor)}</strong>
+      <div className="homey-mobile-direct-actions">
+        <button type="button" disabled={available < qty} className="btn" onClick={addItem}>{copy('productAdd')}</button>
+        <button type="button" disabled={available < qty} className="btn homey-btn-buy-now" onClick={buyNow}>اطلب الآن</button>
+      </div>
+    </div>
   </>;
 }

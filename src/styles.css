@@ -1139,3 +1139,70 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
   .homey-wizard-fields,
   .homey-wizard-review {animation:none !important;transition:none !important;}
 }
+
+
+/* HOMEY | 2026-11-03 | Direct purchase on every product card. */
+.product-card .homey-card-actions {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;
+  width:100%;min-width:0;margin-top:auto;align-items:stretch;
+}
+.product-card .homey-card-actions .btn {
+  width:100%;min-width:0;min-height:39px;padding:7px 5px;
+  display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  font-size:clamp(10px,.84vw,12px);white-space:nowrap;line-height:1.2;
+  border-radius:9px;transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease;
+}
+.product-card .homey-card-actions .btn svg {width:14px;height:14px;flex:none}
+.homey-btn-buy-now {
+  background:#efe3ce!important;color:#564831!important;
+  border:1px solid #dec9a8!important;
+  transition:transform .18s ease,background-color .18s ease,box-shadow .18s ease!important;
+}
+.homey-btn-buy-now:hover:not(:disabled),.homey-btn-buy-now:focus-visible {
+  background:#e7d2ae!important;box-shadow:0 3px 12px rgba(96,71,32,.14);
+  transform:translateY(-1px);
+}
+.homey-btn-buy-now:active:not(:disabled) {transform:scale(.96)}
+.homey-card-actions .homey-card-add:hover:not(:disabled) {transform:translateY(-1px)}
+.homey-btn-buy-now.homey-buy-now-active {animation:homeyBuyNowTap .16s ease-out both}
+@keyframes homeyBuyNowTap {0%{transform:scale(1)}45%{transform:scale(.93)}100%{transform:scale(1.02)}}
+@media(max-width:767px){
+  .product-card .homey-card-actions {grid-template-columns:minmax(0,1fr);gap:5px}
+  .product-card .homey-card-actions .btn {min-height:34px;padding:6px 4px;font-size:11px}
+  .product-card .homey-card-actions .btn svg {width:13px;height:13px}
+}
+@media(max-width:350px){
+  .product-card .homey-card-actions .btn {font-size:10.5px;min-height:33px}
+}
+.product-page .homey-detail-buy-actions {align-items:center;gap:10px;display:flex;flex-wrap:wrap}
+.product-page .homey-detail-cta-pair {flex:1;min-width:190px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.product-page .homey-detail-cta-pair .btn {width:100%;min-width:0;padding:10px 6px;white-space:nowrap}
+.homey-direct-product {
+  display:flex;gap:13px;align-items:center;padding:11px;border:1px solid #e6e3d8;
+  border-radius:13px;background:#fbfaf5;min-width:0;
+}
+.homey-direct-product>img {width:98px;height:98px;flex:none;object-fit:contain;background:#fff;border-radius:9px}
+.homey-direct-product-info {min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.homey-direct-product-info>strong {font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.homey-direct-product-info>small {font-size:12px;color:var(--muted)}
+.homey-direct-product-info>b {color:#43583c;font-size:16px}
+.homey-direct-quantity-row {display:flex;align-items:center;flex-wrap:wrap;gap:9px;font-size:13px;font-weight:650;margin:3px 0}
+.homey-direct-quantity-row .quantity {flex:none}
+.homey-direct-edit {align-self:center;text-decoration:none}
+@media(max-width:767px){
+  .product-page .homey-detail-cta-pair {min-width:0}
+  .homey-mobile-direct-bar {gap:8px}
+  .homey-mobile-direct-bar .homey-mobile-direct-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;flex:1 1 auto;min-width:0}
+  .homey-mobile-direct-bar .homey-mobile-direct-actions .btn {min-width:0;padding:9px 5px;font-size:11px;width:100%;min-height:43px}
+  .homey-mobile-direct-bar>strong {flex:0 1 auto;font-size:12px;max-width:100px}
+}
+@media(max-width:360px){
+  .homey-direct-product>img {width:70px;height:78px}
+  .homey-direct-product {gap:8px;padding:8px}
+  .homey-direct-quantity-row {gap:6px}
+  .homey-mobile-direct-bar {padding-inline:9px}
+  .homey-mobile-direct-bar .homey-mobile-direct-actions .btn {font-size:10px;padding:7px 3px}
+}
+@media(prefers-reduced-motion:reduce){
+  .homey-btn-buy-now,.product-card .homey-card-actions .btn {animation:none!important;transition:none!important;transform:none!important}
+}

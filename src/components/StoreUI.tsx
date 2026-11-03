@@ -1,5 +1,5 @@
-import { Link, useLocation } from '@tanstack/react-router';
-import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus } from 'lucide-react';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
+import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus, Zap } from 'lucide-react';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { catalog, explain, money, imageFor, assetUrl, type Catalog, type Product, type Variant } from '@/lib/commerce';
 import { useCart } from '@/lib/cart';
@@ -110,13 +110,25 @@ export function Quantity({ value, onChange, max = 999 }: {
     value: number;
     onChange: (n: number) => void;
     max?: number;
-}) { return <div className="quantity"><button aria-label="تقليل الكمية" disabled={value <= 1} onClick={() => onChange(value - 1)}><Minus size={15}/></button><span>{value}</span><button aria-label="زيادة الكمية" disabled={value >= max} onClick={() => onChange(value + 1)}><Plus size={15}/></button></div>; }
+}) { return <div className="quantity"><button type="button" aria-label="تقليل الكمية" disabled={value <= 1} onClick={() => onChange(value - 1)}><Minus size={15}/></button><span>{value}</span><button type="button" aria-label="زيادة الكمية" disabled={value >= max} onClick={() => onChange(value + 1)}><Plus size={15}/></button></div>; }
 export function ProductCard({ p, v }: {
     p: Product;
     v: Variant;
 }) {
     const copy = useCopy();
     const { add } = useCart();
+    const navigate = useNavigate();
+    const [buying, setBuying] = useState(false);
+    const buyNowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (buyNowTimer.current !== null) clearTimeout(buyNowTimer.current); }, []);
+    const buyNow = () => {
+        if (buying || stock < 1) return;
+        setBuying(true);
+        // Short visual confirmation, then land directly in the checkout wizard.
+        buyNowTimer.current = setTimeout(() => {
+            void navigate({ to: '/cart', search: { checkout: true, buyNow: v.id, qty: 1 } });
+        }, 135);
+    };
     const stock = v.stock_on_hand - v.stock_reserved;
     const title = v.title_override || p.title_ar;
     const options = Object.values(v.options).filter(Boolean).join(' / ');
@@ -135,10 +147,13 @@ export function ProductCard({ p, v }: {
                 <strong>{money(v.price_minor)}</strong>
                 {hasDiscount && v.compare_at_minor ? <del>{money(v.compare_at_minor)}</del> : null}
             </div>
-            <button disabled={stock < 1} className="btn compact" onClick={() => {
-                add(v.id);
-                toast.success('اتضاف للسلة ✓', { duration: 850, className: 'homey-cart-toast' });
-            }}><ShoppingCart size={16}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button>
+            <div className="homey-card-actions">
+                <button type="button" disabled={stock < 1 || buying} className="btn compact homey-card-add" onClick={() => {
+                    add(v.id);
+                    toast.success('اتضاف للسلة ✓', { duration: 850, className: 'homey-cart-toast' });
+                }}><ShoppingCart size={15}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button>
+                <button type="button" disabled={stock < 1 || buying} className={'btn compact homey-btn-buy-now' + (buying ? ' homey-buy-now-active' : '')} onClick={buyNow} aria-label={`اطلب الآن: ${title}`}><Zap size={15} aria-hidden="true"/>{buying ? 'جاري الطلب...' : 'اطلب الآن'}</button>
+            </div>
         </div>
     </article>;
 }

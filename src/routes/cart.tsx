@@ -12,7 +12,11 @@ import { whatsappHref } from '@/lib/content-model';
 import { orderWhatsAppUrl, requestKey } from '@/lib/checkout-message';
 
 export const Route = createFileRoute('/cart')({
-  validateSearch: (s: Record<string, unknown>) => ({ checkout: s.checkout === true || s.checkout === 'true' }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    checkout: s.checkout === true || s.checkout === 'true',
+    buyNow: typeof s.buyNow === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.buyNow) ? s.buyNow : '',
+    qty: Math.min(999, Math.max(1, Math.floor(Number(s.qty) || 1))),
+  }),
   component: Cart,
 });
 
@@ -20,13 +24,17 @@ function Cart() {
   const { config } = useSite();
   const copy = useCopy();
   const cart = useCart();
+  const search = Route.useSearch();
+  const isDirect = Boolean(search.buyNow);
+  const [directQty, setDirectQty] = useState(search.qty);
+  const orderLines = isDirect ? [{ variantId: search.buyNow, quantity: directQty }] : cart.lines;
   const { products, loading, error, reload } = useCatalog();
   const [zones, setZones] = useState<Zone[]>([]);
   const [promotion, setPromotion] = useState<ShippingPromotion | null>(null);
   const [governorate, setGovernorate] = useState('');
   const [zoneId, setZoneId] = useState('');
   const [shippingError, setShippingError] = useState('');
-  const [stage, setStage] = useState(Route.useSearch().checkout ? 1 : 0);
+  const [stage, setStage] = useState(search.checkout ? 1 : 0);
   const [wizardStep, setWizardStep] = useState(0);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -44,6 +52,18 @@ function Cart() {
   const attemptHash = useRef('');
   const submitting = useRef(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
+
+  // The router can reuse this component when a new Buy Now link is opened.
+  // Reset the wizard to the newly selected product, without affecting the normal cart.
+  useEffect(() => {
+    setDirectQty(search.qty);
+    setStage(search.checkout ? 1 : 0);
+    setWizardStep(0);
+    setFailure('');
+    setResult(null);
+    idempotency.current = '';
+    attemptHash.current = '';
+  }, [search.buyNow, search.qty]);
 
   useEffect(() => {
     const saved = rememberedContact();
@@ -72,11 +92,18 @@ function Cart() {
     return () => { mounted = false; document.removeEventListener('visibilitychange', updateWhenVisible); clearInterval(interval); };
   }, []);
 
-  const rows = cart.lines.map(l => {
+  const rows = orderLines.map(l => {
     const p = products.find(p => p.variants.some(v => v.id === l.variantId));
     const v = p?.variants.find(v => v.id === l.variantId);
     return { ...l, p, v };
   });
+  const directMax = Math.max(1, Math.min(999, (rows[0]?.v?.stock_on_hand || 0) - (rows[0]?.v?.stock_reserved || 0)));
+  const changeDirectQty = (quantity: number) => {
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > directMax) return;
+    setDirectQty(quantity);
+    setFailure('');
+    idempotency.current = '';
+  };
   const availableZones = zones.filter(z => z.governorate === governorate);
   const zone = zones.find(z => z.id === zoneId && z.governorate === governorate);
   const fee = effectiveShippingFee(zone, promotion);
@@ -205,7 +232,7 @@ function Cart() {
     if (submitting.current) return;
     setFailure('');
     if (error || loading) return setFailure('تعذر تحميل بيانات السلة. أعد المحاولة.');
-    if (!cart.lines.length) return setFailure('السلة فاضية؛ ضيف منتج الأول.');
+    if (!orderLines.length) return setFailure('مفيش منتجات في الطلب.');
     if (!governorate) return setFailure('اختار المحافظة عشان نعرف نوصل لك.');
     if (!EGYPT_GOVERNORATES.includes(governorate as (typeof EGYPT_GOVERNORATES)[number])) return setFailure('اختار محافظة من القائمة.');
     if (!zone) return setFailure(availableZones.length ? 'اختار نطاق التوصيل.' : 'تعذر تحميل سعر شحن المحافظة. حدّث الصفحة وحاول تاني.');
@@ -240,7 +267,7 @@ function Cart() {
       const body = {
         ...form, customer_name: form.customer_name.trim(), area: form.area.trim(), address: form.address.trim(),
         customer_phone: normalized, governorate: zone.governorate, shipping_zone_id: zone.id,
-        items: cart.lines.map(l => ({ variant_id: l.variantId, quantity: l.quantity })),
+        items: orderLines.map(l => ({ variant_id: l.variantId, quantity: l.quantity })),
       };
       const hash = JSON.stringify(body);
       let saved: {hash: string; key: string} | null = null;
@@ -252,7 +279,7 @@ function Cart() {
       try { sessionStorage.removeItem('homy-checkout-attempt'); } catch {}
       setResult(order);
       rememberContact({...form, customer_phone: normalized, governorate: zone.governorate, shipping_zone_id: zone.id}, remember);
-      cart.clear();
+      if (!isDirect) cart.clear(); // Direct checkout must never modify the existing shopping cart.
       // Saved order is confirmed by the database. WhatsApp/settings failures must never reverse this success.
       let settings = config.whatsapp;
       let settingsTimer: ReturnType<typeof setTimeout> | undefined;
@@ -290,17 +317,17 @@ function Cart() {
   if (!cart.ready || loading) return <div className="wrap page"><Loading/></div>;
   return <div className="wrap page homey-checkout">
     <div className="checkout-steps" aria-label="خطوات الشراء"><span className={stage === 0 ? 'active' : ''}>١. السلة</span><span className={stage === 1 ? 'active' : ''}>٢. تأكيد البيانات</span><span>٣. تم الطلب</span></div>
-    <h1>سلة مشترياتك</h1>
-    <p className="homey-cart-guide">راجع منتجاتك والإجمالي، وبعدها اضغط «متابعة الطلب» علشان نوصّلها لك.</p>
+    <h1>{isDirect ? 'تأكيد طلبك السريع' : 'سلة مشترياتك'}</h1>
+    <p className="homey-cart-guide">{isDirect ? 'الطلب ده للمنتج اللي اخترته بس، وسلتك العادية مش هتتغير. اختار الكمية وكمل بياناتك.' : 'راجع منتجاتك والإجمالي، وبعدها اضغط «متابعة الطلب» علشان نوصّلها لك.'}</p>
     {error && <Notice>{error}<button type="button" className="text-button" onClick={reload}>إعادة المحاولة</button></Notice>}
-    {!cart.lines.length ? <div className="empty"><ShoppingCart size={50}/><h2>السلة لسه فاضية</h2><Link to="/products" className="btn">تسوّق المنتجات</Link></div> :
+    {!orderLines.length ? <div className="empty"><ShoppingCart size={50}/><h2>السلة لسه فاضية</h2><Link to="/products" className="btn">تسوّق المنتجات</Link></div> :
       <div className="checkout-layout" aria-hidden={stage === 1 ? true : undefined}>
         <div className="cart-items">{rows.map(l => <article className="cart-item" key={l.variantId}>
           <Picture src={l.p ? imageFor(l.p, l.v) : undefined} alt={l.p?.title_ar || 'منتج غير متاح'}/>
           <div><h3>{l.v?.title_override || l.p?.title_ar || 'منتج غير متاح'}</h3><p className="muted">{Object.values(l.v?.options || {}).join(' / ')}</p><strong>{l.v ? money(l.v.price_minor) : 'غير متاح'}</strong>{l.v && l.quantity > l.v.stock_on_hand - l.v.stock_reserved && <p className="danger">الكمية المطلوبة مش متوفرة</p>}</div>
-          <Quantity value={l.quantity} max={Math.max(l.quantity, l.v ? l.v.stock_on_hand - l.v.stock_reserved : 1)} onChange={n => { cart.setQty(l.variantId, n); idempotency.current = ''; }}/>
+          <Quantity value={l.quantity} max={Math.max(l.quantity, l.v ? Math.min(999, l.v.stock_on_hand - l.v.stock_reserved) : 1)} onChange={n => { if (isDirect) changeDirectQty(n); else { cart.setQty(l.variantId, n); idempotency.current = ''; } }}/>
           <b>{money((l.v?.price_minor || 0) * l.quantity)}</b>
-          <button type="button" className="icon-button" aria-label="حذف المنتج من السلة" onClick={() => { cart.remove(l.variantId); idempotency.current = ''; }}><Trash2 size={18}/></button>
+          {isDirect ? (l.v ? <Link className="text-button homey-direct-edit" to="/product/$slug" params={{ slug: l.v.slug }}>تغيير المنتج</Link> : <Link className="text-button" to="/products">اختار منتج تاني</Link>) : <button type="button" className="icon-button" aria-label="حذف المنتج من السلة" onClick={() => { cart.remove(l.variantId); idempotency.current = ''; }}><Trash2 size={18}/></button>}
         </article>)}</div>
         <aside className="panel order-summary homey-order-summary">
           <h2>ملخص الطلب</h2>
@@ -315,11 +342,11 @@ function Cart() {
           {shippingError && <Notice>{shippingError}<button type="button" className="text-button" onClick={() => window.location.reload()}>تحديث</button></Notice>}
         </aside>
       </div>}
-    {mounted && stage === 1 && cart.lines.length > 0 && createPortal(<div className="homey-checkout-wizard-overlay">
+    {mounted && stage === 1 && orderLines.length > 0 && createPortal(<div className="homey-checkout-wizard-overlay">
       <div ref={wizardRootRef} className="homey-checkout-wizard" role="dialog" aria-modal="true" aria-labelledby="homey-wizard-heading" aria-describedby="homey-wizard-description" dir="rtl">
         <div className="homey-wizard-top">
           <div><p className="homey-wizard-eyebrow">طلبك مع هومي</p><h2 id="homey-wizard-heading" ref={wizardHeadingRef} tabIndex={-1}>{wizardStep === 0 ? 'نبدأ ببياناتك' : wizardStep === 1 ? 'فين نوصّل الطلب؟' : 'راجع طلبك وأكّده'}</h2>
-            <p id="homey-wizard-description">{wizardStep === 0 ? 'محتاجين اسمك ورقم موبايلك بس.' : wizardStep === 1 ? 'اكتب العنوان علشان الأوردر يوصل صح.' : 'اتأكد من الإجمالي والعنوان قبل التسجيل.'}</p></div>
+            <p id="homey-wizard-description">{wizardStep === 0 ? (isDirect ? 'حدد الكمية واكتب اسمك ورقم موبايلك.' : 'محتاجين اسمك ورقم موبايلك بس.') : wizardStep === 1 ? 'اكتب العنوان علشان الأوردر يوصل صح.' : 'اتأكد من الإجمالي والعنوان قبل التسجيل.'}</p></div>
           <button type="button" className="homey-wizard-close" disabled={busy} onClick={closeWizard} aria-label="إغلاق خطوات الطلب والرجوع للسلة"><X size={21}/></button>
         </div>
         <div className="homey-wizard-progress" aria-label="تقدم تأكيد الطلب">
@@ -331,7 +358,16 @@ function Cart() {
           {failure && <div ref={wizardErrorRef} className="homey-wizard-error" role="alert" tabIndex={-1}>{failure}</div>}
           <form id="checkout-form" noValidate onSubmit={e => { e.preventDefault(); if (wizardStep < 2) nextWizardStep(); else void submit(e); }}>
             {wizardStep === 0 && <div className="homey-wizard-fields">
-              <div className="homey-wizard-step-note"><UserRound size={19}/><span>مش محتاج تعمل حساب أو باسورد.</span></div>
+              {isDirect && <div className="homey-direct-product" role="group" aria-label="تفاصيل المنتج المطلوب الآن">
+                <Picture src={rows[0]?.p ? imageFor(rows[0].p, rows[0].v) : undefined} alt={rows[0]?.v?.title_override || rows[0]?.p?.title_ar || 'المنتج المطلوب'}/>
+                <div className="homey-direct-product-info">
+                  <strong>{rows[0]?.v?.title_override || rows[0]?.p?.title_ar || 'المنتج المطلوب'}</strong>
+                  <small>{rows[0]?.v ? money(rows[0].v.price_minor) + ' للقطعة' : 'جاري تحميل بيانات المنتج'}</small>
+                  <div className="homey-direct-quantity-row"><span>الكمية</span><Quantity value={directQty} max={directMax} onChange={changeDirectQty}/></div>
+                  <b>{money(subtotal)}</b>
+                </div>
+              </div>}
+              <div className="homey-wizard-step-note"><UserRound size={19}/><span>{isDirect ? 'اختار العدد واكتب اسمك ورقمك، وهنكمّل التوصيل.' : 'مش محتاج تعمل حساب أو باسورد.'}</span></div>
               <label htmlFor="homey-customer-name">اسمك بالكامل <span className="required-hint">*</span><input id="homey-customer-name" required autoComplete="name" placeholder="مثال: أحمد محمد" value={form.customer_name} onChange={e => changeField('customer_name', e.target.value)}/></label>
               <label htmlFor="homey-customer-phone">رقم الموبايل <span className="required-hint">*</span><input id="homey-customer-phone" required inputMode="tel" autoComplete="tel" type="tel" dir="ltr" maxLength={18} placeholder="01XXXXXXXXX" value={form.customer_phone} onChange={e => changeField('customer_phone', e.target.value)}/></label>
               <p className="homey-wizard-help">هنستخدم الرقم لتأكيد الطلب والتواصل معاك بخصوص التوصيل بس.</p>
