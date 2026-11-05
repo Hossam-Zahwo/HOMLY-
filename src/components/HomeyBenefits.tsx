@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useId, useMemo, useRef, useState} from 'react';
-import {Leaf, PackageCheck, ShieldCheck, Truck} from 'lucide-react';
+import {Leaf, PackageCheck, ShieldCheck, Truck, Sparkles} from 'lucide-react';
 import {useCopy} from '@/lib/site';
 import {latinDigits} from '@/lib/digits';
 
@@ -59,7 +59,11 @@ export function HomeyBenefits({title = 'معاك في كل خطوة'}: {title?: 
     const trackRect = track.getBoundingClientRect();
     const cardRect = item.getBoundingClientRect();
     const delta = (cardRect.left + cardRect.width / 2) - (trackRect.left + trackRect.width / 2);
-    if (Math.abs(delta) > 1) track.scrollBy({left: delta, behavior});
+    if (Math.abs(delta) > 1) {
+      // Older iOS Safari lacks smooth ScrollToOptions on elements.
+      try { track.scrollBy({left: delta, behavior}); }
+      catch { track.scrollLeft += delta; }
+    }
   }, []);
 
   useEffect(() => {
@@ -70,11 +74,22 @@ export function HomeyBenefits({title = 'معاك في كل خطوة'}: {title?: 
       setReducedMotion(motion.matches);
     };
     update();
-    media.addEventListener('change', update);
-    motion.addEventListener('change', update);
+    // MediaQueryList.addEventListener is unavailable on older iOS Safari.
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', update);
+      motion.addEventListener('change', update);
+    } else {
+      media.addListener(update);
+      motion.addListener(update);
+    }
     return () => {
-      media.removeEventListener('change', update);
-      motion.removeEventListener('change', update);
+      if (typeof media.removeEventListener === 'function') {
+        media.removeEventListener('change', update);
+        motion.removeEventListener('change', update);
+      } else {
+        media.removeListener(update);
+        motion.removeListener(update);
+      }
     };
   }, []);
 
@@ -129,7 +144,7 @@ export function HomeyBenefits({title = 'معاك في كل خطوة'}: {title?: 
     <Leaf aria-hidden="true" className="homey-benefits-leaf homey-benefits-leaf-top" strokeWidth={1.1}/>
     <Leaf aria-hidden="true" className="homey-benefits-leaf homey-benefits-leaf-bottom" strokeWidth={1.1}/>
     <div className="homey-benefits-heading">
-      <span aria-hidden="true" className="homey-benefits-spark">✳</span>
+      <Sparkles aria-hidden="true" className="homey-benefits-spark" size={24} strokeWidth={2.2}/>
       <h2 id={headingId}>{latinDigits(title)}</h2>
       <svg aria-hidden="true" className="homey-benefits-underline" viewBox="0 0 218 20" fill="none"><path d="M4 13C62-4 134-1 214 8" stroke="#F3A38B" strokeWidth="5" strokeLinecap="round" opacity=".68"/></svg>
     </div>

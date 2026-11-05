@@ -6,6 +6,16 @@ import { useCart } from '@/lib/cart';
 import {useFavorites} from '@/lib/favorites';
 import {latinDigits} from '@/lib/digits';
 import {supabaseResponsiveImage,hasResponsiveTransform} from '@/lib/image-optimization';
+import bundledHeroFallback from '@/assets/homey-hero-flowers.jpg';
+
+// On iOS every browser uses WebKit. Avoid transform endpoints that may fail or stall
+// on Safari, and wake images near scrollable sliders before the user reaches them.
+function isIOSWebKit(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 import { configured } from '@/lib/supabase';
 import { useSite, useCopy } from '@/lib/site';
 import { safeHref, whatsappHref } from '@/lib/content-model';
@@ -16,15 +26,70 @@ export function Logo() { const { config } = useSite(); return <Link to="/" class
  * On Supabase Pro, setting VITE_HOMEY_IMAGE_TRANSFORMS=true additionally enables
  * width-specific CDN images. The default remains safe for free accounts.
  */
-export function Picture({ src, alt = '', className = '', priority = false, kind = 'product' }: {
+const SAFE_IMAGE_FALLBACK = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360"><rect width="480" height="360" rx="18" fill="#FAF5EE"/><path d="M145 225l70-72 52 48 36-33 49 57" stroke="#A8AE9B" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="191" cy="120" r="23" fill="#DADCCF"/></svg>');
+export function Picture({ src, fallbackSrc, alt = '', className = '', priority = false, kind = 'product' }: {
     src?: string;
+    fallbackSrc?: string;
     alt?: string;
     className?: string;
     priority?: boolean;
     kind?: 'product' | 'hero' | 'category' | 'thumbnail';
 }) {
-    const original = assetUrl(src || '');
-    const responsive = hasResponsiveTransform(original);
+    const primary = assetUrl(src || '');
+    const secondary = fallbackSrc && assetUrl(fallbackSrc) !== primary ? assetUrl(fallbackSrc) : null;
+    const [trySecondary, setTrySecondary] = useState(false);
+    const original = trySecondary && secondary ? secondary : primary;
+    const imageRef = useRef<HTMLImageElement | null>(null);
+    const iosWebKit = isIOSWebKit();
+    const important = priority || kind === 'hero';
+    // Use explicit proximity loading on all browsers to keep SSR hydration
+    // stable. Native lazy-loading alone may stall in WebKit scroll containers.
+    // Distant cards show a tiny local placeholder until their actual URL is set.
+    const [nearViewport, setNearViewport] = useState(() => important);
+    const [useOriginal, setUseOriginal] = useState(false);
+    const [failed, setFailed] = useState(false);
+    useEffect(() => { setTrySecondary(false); }, [primary, secondary]);
+    useEffect(() => {
+        setNearViewport(important);
+        setUseOriginal(false);
+        setFailed(false);
+    }, [original, important, iosWebKit]);
+    useEffect(() => {
+        if (nearViewport) return;
+        const img = imageRef.current;
+        if (!img) return;
+        let done = false;
+        const activate = () => { if (!done) { done = true; setNearViewport(true); } };
+        const checkDistance = () => {
+            if (done) return;
+            const r = img.getBoundingClientRect();
+            const height = window.innerHeight || document.documentElement.clientHeight;
+            const width = window.innerWidth || document.documentElement.clientWidth;
+            if (r.bottom >= -450 && r.top <= height + 850 && r.right >= -250 && r.left <= width + 250) activate();
+        };
+        // Check synchronously after mount and again after flex layout completes.
+        checkDistance();
+        const scheduled = window.setTimeout(checkDistance, 350);
+        let observer: IntersectionObserver | null = null;
+        if (typeof IntersectionObserver !== 'undefined') {
+            observer = new IntersectionObserver(entries => {
+                if (entries.some(entry => entry.isIntersecting)) activate();
+            }, { rootMargin: '850px 250px 450px', threshold: 0 });
+            observer.observe(img);
+        } else {
+            // Older WebKit: fallback for visible rows, not 100 eager images.
+            window.addEventListener('scroll', checkDistance, { passive: true });
+            window.addEventListener('resize', checkDistance, { passive: true });
+        }
+        return () => {
+            done = true;
+            window.clearTimeout(scheduled);
+            observer?.disconnect();
+            window.removeEventListener('scroll', checkDistance);
+            window.removeEventListener('resize', checkDistance);
+        };
+    }, [original, nearViewport]);
+    const responsive = !iosWebKit && hasResponsiveTransform(original) && !useOriginal;
     const widths = kind === 'hero' ? [640, 960, 1440, 1920]
         : kind === 'category' ? [180, 320, 480, 720]
         : kind === 'thumbnail' ? [96, 160, 240]
@@ -35,28 +100,30 @@ export function Picture({ src, alt = '', className = '', priority = false, kind 
         : '(max-width: 767px) 48vw, (max-width: 1100px) 30vw, 260px';
     const preferredWidth = kind === 'hero' ? 1440 : kind === 'thumbnail' ? 160 : kind === 'category' ? 320 : 720;
     const imageSrc = responsive ? supabaseResponsiveImage(original, preferredWidth) : original;
-    const srcSet = responsive ? widths.map(width => `${supabaseResponsiveImage(original, width)} ${width}w`).join(', ') : undefined;
+    const imageSrcSet = responsive ? widths.map(width => `${supabaseResponsiveImage(original, width)} ${width}w`).join(', ') : undefined;
+    const showActual = nearViewport && !failed;
+    const finalSrc = failed ? (kind === 'hero' ? bundledHeroFallback : SAFE_IMAGE_FALLBACK)
+        : !nearViewport ? SAFE_IMAGE_FALLBACK : imageSrc;
     return <img
-        src={imageSrc}
-        srcSet={srcSet}
-        sizes={responsive ? sizes : undefined}
+        ref={imageRef}
+        src={finalSrc}
+        srcSet={showActual ? imageSrcSet : undefined}
+        sizes={showActual && responsive ? sizes : undefined}
         width={kind === 'hero' ? 1600 : kind === 'category' ? 480 : kind === 'thumbnail' ? 120 : 720}
         height={kind === 'hero' ? 740 : kind === 'category' ? 320 : kind === 'thumbnail' ? 120 : 720}
         alt={alt} className={className}
-        loading={priority ? 'eager' : 'lazy'}
-        fetchPriority={priority ? 'high' : undefined}
+        // The real URL is only present when near; eager loading is then safe
+        // and avoids native lazy-loading stalls in iOS scroll containers.
+        loading="eager"
+        fetchPriority={priority && kind === 'hero' ? 'high' : undefined}
         decoding="async"
-        onError={e => {
-            const img = e.currentTarget;
-            if (responsive && img.dataset.homeyOriginalFallback !== '1') {
-                img.dataset.homeyOriginalFallback = '1';
-                img.parentElement?.querySelectorAll('source').forEach(source => source.remove());
-                img.srcSet = '';
-                img.src = original;
-                return;
-            }
-            img.onerror = null;
-            img.src = '/placeholder.svg';
+        onError={() => {
+            if (!nearViewport || failed) return;
+            if (responsive && !useOriginal) { setUseOriginal(true); return; }
+            if (secondary && !trySecondary) { setTrySecondary(true); return; }
+            // React state holds the fallback across renders/slider transitions;
+            // mutating img.src directly would get reset on every React render.
+            setFailed(true);
         }}
     />;
 }
@@ -237,9 +304,10 @@ export function Quantity({ value, onChange, max = 999 }: {
     onChange: (n: number) => void;
     max?: number;
 }) { return <div className="quantity"><button type="button" aria-label="تقليل الكمية" disabled={value <= 1} onClick={() => onChange(value - 1)}><Minus size={15}/></button><span>{value}</span><button type="button" aria-label="زيادة الكمية" disabled={value >= max} onClick={() => onChange(value + 1)}><Plus size={15}/></button></div>; }
-export function ProductCard({ p, v }: {
+export function ProductCard({ p, v, priority = false }: {
     p: Product;
     v: Variant;
+    priority?: boolean;
 }) {
     const copy = useCopy();
     const { add } = useCart();
@@ -263,7 +331,7 @@ export function ProductCard({ p, v }: {
     return <article className="product-card">
         <div className="homey-product-media">
         <Link to="/product/$slug" params={{ slug: v.slug }} className="product-photo" aria-label={title}>
-            <Picture src={imageFor(p, v)} alt={title}/>
+            <Picture src={imageFor(p, v)} fallbackSrc={p.images.find(url => url !== imageFor(p, v))} alt={title} priority={priority}/>
             {hasDiscount ? <span className="discount">عرض خاص</span> : null}
         </Link>
         <button type="button" className={'homey-favorite-toggle' + (has(v.id) ? ' is-favorite' : '')}

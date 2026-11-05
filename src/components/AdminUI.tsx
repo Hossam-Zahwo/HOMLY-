@@ -66,11 +66,13 @@ export function AdminPage({ children }: { children: ReactNode }) {
     const oldOverflow = document.body.style.overflow;
     if (media.matches) document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onEscape);
-    media.addEventListener('change', closeOnDesktop);
+    if (typeof media.addEventListener === 'function') media.addEventListener('change', closeOnDesktop);
+    else media.addListener(closeOnDesktop);
     return () => {
       document.body.style.overflow = oldOverflow;
       window.removeEventListener('keydown', onEscape);
-      media.removeEventListener('change', closeOnDesktop);
+      if (typeof media.removeEventListener === 'function') media.removeEventListener('change', closeOnDesktop);
+      else media.removeListener(closeOnDesktop);
     };
   }, [open]);
 

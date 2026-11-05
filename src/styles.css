@@ -1253,7 +1253,7 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
 .homey-new-hero-picture img{object-fit:cover;object-position:center;animation:homeyHeroImage .55s ease both}
 .homey-new-hero-picture::after{content:"";position:absolute;inset:0;background:linear-gradient(to left,rgba(255,224,211,.53) 0%,rgba(255,227,214,.33) 43%,rgba(255,222,202,.08) 78%,transparent 100%);pointer-events:none}
 .homey-new-hero-content{position:relative;z-index:1;direction:rtl;flex:0 1 54%;max-width:660px;padding:15px clamp(19px,5vw,64px);text-align:center}
-.homey-new-hero-content::before{content:"✳";position:absolute;color:#ee866c;opacity:.8;right:13%;top:-1%;font-size:22px;pointer-events:none}
+.homey-hero-decor{position:absolute;color:#ef9579;opacity:.9;right:12px;top:8px;pointer-events:none}
 .homey-new-hero-content h1{font-size:clamp(25px,3.5vw,43px);line-height:1.4;font-weight:800;color:#40512d;margin:5px 0 5px;text-shadow:0 1px 10px rgba(255,249,241,.83)}
 .homey-new-hero-content p{font-size:clamp(12px,1.2vw,15px);color:#484a39;margin-bottom:13px;line-height:1.7;text-shadow:0 1px 8px rgba(255,251,245,.9)}
 .homey-hero-kicker{display:inline-flex;align-items:center;gap:5px;color:#955a41;font-size:11px;font-weight:750;text-shadow:0 1px 9px rgba(255,252,245,.85)}
@@ -1360,7 +1360,7 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
   .homey-new-hero-picture img{object-fit:cover;object-position:center}
   .homey-new-hero-picture::after{background:linear-gradient(to top,rgba(255,223,206,.64),rgba(255,228,215,.3) 45%,rgba(255,230,216,.06) 100%)}
   .homey-new-hero-content{position:relative;flex:1 1 auto;padding:10px 17px 26px;width:100%;max-width:540px;text-align:center}
-  .homey-new-hero-content::before{top:1%;right:7%}
+  .homey-hero-decor{top:8px;right:9px;width:17px;height:17px}
   .homey-new-hero-content h1{font-size:clamp(23px,6.5vw,30px);margin:3px 0}
   .homey-new-hero-content p{font-size:12px;line-height:1.55;margin-bottom:9px}
   .homey-hero-dots{right:50%;bottom:8px}
@@ -1413,7 +1413,7 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
 }
 
 /* Starter hero artwork fills the ENTIRE slider; merchant-uploaded images still take priority. */
-.homey-new-hero-slide.homey-first-visual .homey-new-hero-picture{background:url('./assets/homey-hero-flowers.webp') center/cover no-repeat}
+.homey-new-hero-slide.homey-first-visual .homey-new-hero-picture{background:url('./assets/homey-hero-flowers.jpg') center/cover no-repeat}
 .homey-new-hero-slide.homey-first-visual .homey-new-hero-picture img{opacity:0}
 
 /* HOMEY benefits redesign — cream / olive / peach, inspired by the approved mockup.
@@ -1439,7 +1439,7 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
   margin:0;color:var(--benefit-olive);font-family:'Cairo',sans-serif;
   font-size:clamp(24px,3.3vw,39px);font-weight:800;line-height:1.6;
 }
-.homey-benefits-spark {position:absolute;top:-5px;right:calc(50% + 180px);color:#ef936f;font-size:26px;transform:rotate(-20deg)}
+.homey-benefits-spark {position:absolute;top:-5px;right:calc(50% + 180px);color:#ef936f;width:25px;height:25px;transform:rotate(-20deg)}
 .homey-benefits-underline {display:block;width:min(200px,42%);height:19px;margin:-1px auto 0;transform:rotate(-3deg)}
 .homey-benefits-track {
   position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
@@ -1484,7 +1484,7 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
   .store-main .homey-benefits {width:calc(100% - 28px);margin-block:19px 27px;padding:23px 0 22px;border-radius:22px;overflow:hidden}
   .store-main .homey-benefits-heading h2 {font-size:clamp(22px,6vw,29px)}
   .homey-benefits-heading {margin-bottom:19px;padding-inline:12px}
-  .homey-benefits-spark {right:calc(50% + 111px);top:0;font-size:19px}
+  .homey-benefits-spark {right:calc(50% + 111px);top:0;width:19px;height:19px}
   .homey-benefits-underline {width:140px;height:15px}
   .homey-benefits-track {
     display:flex;grid-template-columns:none;gap:11px;max-width:none;
@@ -1515,3 +1515,190 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
 /* Rendering offscreen cards can be skipped by Chromium until scrolled into view. */
 .homey-more-products .product-card{content-visibility:auto;contain-intrinsic-size:auto 440px;}
 @media (prefers-reduced-motion: reduce){.skeleton{animation:none!important;}}
+
+/* HOMEY iPhone image and hero legibility hotfix — 2026-11-05.
+   This is an actual translucent white panel behind the slide copy, not an opaque
+   replacement for the photo. Blur is modest on iPhone to keep scrolling fast. */
+.homey-new-hero-content{
+  background:rgba(255,252,248,.76);
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:19px;
+  box-shadow:0 10px 24px rgba(54,52,39,.12);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+  margin:10px 20px;
+  padding:16px clamp(20px,4vw,36px) 19px;
+}
+.homey-new-hero-content h1,.homey-new-hero-content p,
+.homey-new-hero-content .homey-hero-kicker{text-shadow:none}
+/* Safe fallback if browser doesn't implement backdrop filters. */
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .homey-new-hero-content{background:rgba(255,253,249,.92)}
+}
+@media(max-width:767px){
+  .homey-new-hero-slide.is-current{align-items:center}
+  .homey-new-hero-content{
+    flex:0 1 auto;width:calc(100% - 28px);max-width:510px;
+    margin:11px auto 20px;padding:12px 15px 15px;
+    background:rgba(255,253,249,.84);
+    -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    border-radius:16px;
+  }
+  .homey-new-hero-content h1{font-size:clamp(22px,6.1vw,30px);line-height:1.45}
+  .homey-new-hero-content p{line-height:1.5;margin-bottom:8px}
+}
+/* iOS Safari can hold back lazy images inside content-visibility containers.
+   Do not apply paint-skipping to those cards on iPhones and iPads. */
+@supports (-webkit-touch-callout:none){
+  .homey-more-products .product-card{content-visibility:visible!important;contain-intrinsic-size:auto!important}
+}
+
+/* 2026-11-05: WebKit readability and consistent decorative accents.
+   These are CSS strokes, never iPhone system emoji glyphs. */
+.homey-new-hero-content .homey-hero-decor{
+  display:block;position:absolute;top:10px;right:14px;width:28px;height:25px;
+  background:none;opacity:1;pointer-events:none;color:transparent;
+}
+.homey-new-hero-content .homey-hero-decor::before,
+.homey-new-hero-content .homey-hero-decor::after{
+  content:"";position:absolute;border-radius:6px;background:#f08c6a;
+  width:3px;height:12px;top:1px;right:9px;transform:rotate(-30deg)
+}
+.homey-new-hero-content .homey-hero-decor::after{
+  top:10px;right:0;height:9px;transform:rotate(65deg)
+}
+.homey-new-hero-content {
+  background:rgba(255,255,255,.86);
+  border:1px solid rgba(255,255,255,.94);
+  -webkit-backdrop-filter:blur(7px);
+  backdrop-filter:blur(7px);
+  box-shadow:0 8px 22px rgba(56,58,44,.13);
+}
+.homey-new-hero-content h1 {color:#39472d;text-shadow:none}
+.homey-new-hero-content p {color:#424738;text-shadow:none}
+.homey-new-hero-content .homey-hero-kicker {color:#aa674d;text-shadow:none}
+@media(max-width:767px){
+  .homey-new-hero-content {
+    background:rgba(255,255,255,.91);
+    -webkit-backdrop-filter:blur(5px);
+    backdrop-filter:blur(5px);
+    padding:15px 14px 17px;
+    max-width:calc(100% - 24px);
+  }
+  .homey-new-hero-content .homey-hero-decor{right:10px;top:8px;transform:scale(.78)}
+}
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .homey-new-hero-content{background:rgba(255,255,255,.95)}
+}
+/* The catalog is rendered in small batches; avoid Safari's paint containment
+   blocking intersection calculations or image decoding on product cards. */
+.homey-more-products .product-card {
+  content-visibility:visible!important;
+  contain-intrinsic-size:auto!important;
+}
+
+
+/* 2026-11-05: HOMEY hero concept 1 — very light translucent blur, image remains visible.
+   Desktop and mobile share the same airy look inspired by the approved mockup. */
+.homey-new-hero{
+  background:#f8efe8;
+  border-color:#ecd8ca;
+}
+.homey-new-hero-picture::after{
+  background:
+    linear-gradient(to left, rgba(43,52,34,.22) 0%, rgba(64,76,49,.14) 23%, rgba(255,225,209,.12) 48%, rgba(255,228,214,.04) 78%, transparent 100%);
+}
+.homey-new-hero-content{
+  position:relative;
+  background:transparent;
+  border:none;
+  box-shadow:none;
+  margin:14px 26px;
+  padding:18px clamp(22px,4vw,40px) 20px;
+  overflow:visible;
+  isolation:isolate;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+.homey-new-hero-content::before{
+  content:"";
+  position:absolute;
+  inset:2px;
+  border-radius:24px;
+  background:linear-gradient(180deg, rgba(255,255,255,.19) 0%, rgba(255,255,255,.11) 100%);
+  border:1px solid rgba(255,255,255,.23);
+  box-shadow:0 10px 30px rgba(34,37,27,.12);
+  -webkit-backdrop-filter:blur(4px) saturate(118%);
+  backdrop-filter:blur(4px) saturate(118%);
+  z-index:-1;
+}
+.homey-new-hero-content > *{position:relative;z-index:1}
+.homey-new-hero-content h1{
+  color:#fffefb;
+  text-shadow:0 2px 10px rgba(34,31,24,.22), 0 1px 2px rgba(34,31,24,.15);
+  margin:4px 0 7px;
+}
+.homey-new-hero-content p{
+  color:#fff9f4;
+  text-shadow:0 2px 10px rgba(34,31,24,.22), 0 1px 2px rgba(34,31,24,.12);
+  max-width:30ch;
+  margin-inline:auto;
+}
+.homey-new-hero-content .homey-hero-kicker{
+  color:#fff6f0;
+  text-shadow:0 2px 8px rgba(34,31,24,.18);
+}
+.homey-new-hero-content .homey-hero-decor::before,
+.homey-new-hero-content .homey-hero-decor::after{
+  background:#ff9f79;
+}
+.homey-hero-cta{
+  background:#fffdf9!important;
+  color:#495d33!important;
+  border:1px solid rgba(255,255,255,.88)!important;
+  box-shadow:0 6px 18px rgba(44,45,34,.12);
+}
+.homey-hero-cta:hover{
+  background:#ffffff!important;
+  color:#40512d!important;
+}
+.homey-hero-dots button{
+  background:rgba(255,255,255,.78);
+  border-color:rgba(82,101,54,.48);
+}
+.homey-hero-dots button.active{
+  background:#596c39;
+  border-color:#596c39;
+}
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .homey-new-hero-content::before{
+    background:rgba(255,255,255,.22);
+  }
+}
+@media(max-width:767px){
+  .homey-new-hero-picture::after{
+    background:linear-gradient(to top, rgba(52,58,38,.26) 0%, rgba(80,84,56,.16) 32%, rgba(255,227,214,.10) 62%, transparent 100%);
+  }
+  .homey-new-hero-content{
+    width:calc(100% - 24px);
+    max-width:560px;
+    margin:10px auto 18px;
+    padding:14px 16px 17px;
+  }
+  .homey-new-hero-content::before{
+    inset:0;
+    border-radius:18px;
+    background:linear-gradient(180deg, rgba(255,255,255,.17) 0%, rgba(255,255,255,.10) 100%);
+    -webkit-backdrop-filter:blur(3px) saturate(116%);
+    backdrop-filter:blur(3px) saturate(116%);
+  }
+  .homey-new-hero-content h1{
+    font-size:clamp(22px,6.2vw,30px);
+    line-height:1.42;
+  }
+  .homey-new-hero-content p{
+    font-size:12px;
+    line-height:1.55;
+    max-width:27ch;
+  }
+}

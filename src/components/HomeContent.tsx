@@ -9,7 +9,6 @@ import {rotateHomeCards} from '@/lib/home-product-rotation';
 import {latinDigits} from '@/lib/digits';
 import {useIsMobile} from '@/hooks/use-mobile';
 import {assetUrl} from '@/lib/commerce';
-import {supabaseResponsiveImage} from '@/lib/image-optimization';
 import {useCatalog, Section, Picture, ProductCard, Notice, Loading, Empty} from './StoreUI';
 import {PublicReviews} from './Reviews';
 import {HomeyBenefits} from './HomeyBenefits';
@@ -32,6 +31,7 @@ function selection(block: HomeBlock, all: ProductItem[], seed: number) {
 }
 
 function Hero({block}: {block: HomeBlock}) {
+  const isMobile = useIsMobile();
   const slides = block.slides.filter(slide => slide.visible);
   const [active,setActive] = useState(0);
   const touchStart = useRef<number | null>(null);
@@ -53,12 +53,14 @@ function Hero({block}: {block: HomeBlock}) {
     <div className="homey-new-hero-stage">
       {slides.map((slide,index) => <article key={slide.id} className={'homey-new-hero-slide' + (index === activeIndex ? ' is-current' : '') + (index === 0 && /^\/images\/(kitchen|living|storage)\.png$/.test(slide.image) ? ' homey-first-visual' : '')} aria-hidden={index !== activeIndex}>
         <div className="homey-new-hero-picture">{index === activeIndex && !(index === 0 && /^\/images\/(kitchen|living|storage)\.png$/.test(slide.image)) &&
-          <picture>{slide.mobileImage && <source media="(max-width:767px)" srcSet={supabaseResponsiveImage(assetUrl(slide.mobileImage), 960)}/>}
-            <Picture priority={true} kind="hero" src={slide.image} alt={latinDigits(slide.alt || slide.title)}/>
-          </picture>}
+          <Picture priority={true} kind="hero"
+            src={isMobile && slide.mobileImage ? slide.mobileImage : slide.image}
+            fallbackSrc={slide.image}
+            alt={latinDigits(slide.alt || slide.title)}/>}
         </div>
         <div className="homey-new-hero-content">
-          <span className="homey-hero-kicker"><Sparkles size={14}/> {latinDigits(slide.title)}</span>
+          <span className="homey-hero-decor" aria-hidden="true"/>
+          <span className="homey-hero-kicker">{latinDigits(slide.title)}</span>
           <h1>{latinDigits(block.title)}</h1>
           <p>{latinDigits(block.subtitle || slide.subtitle)}</p>
           {(slide.showButton || block.showButton) && <a tabIndex={index === activeIndex ? 0 : -1} className="btn homey-hero-cta" href={safeHref(slide.showButton ? slide.href : block.href)}>{latinDigits(slide.showButton ? slide.buttonLabel : block.buttonLabel)} <ArrowLeft size={17}/></a>}
@@ -82,7 +84,7 @@ function CategoryDiscovery({categories}: {categories: Category[]}) {
     </div>
     <div className="homey-category-rail" aria-label="أقسام هومي - اسحب لعرض المزيد">
       {categories.map((cat,index) => <Link to="/category/$slug" params={{slug:cat.slug}} key={cat.id} className="homey-category-tile">
-        <div className="homey-category-image"><Picture kind="category" src={cat.image_path} alt={latinDigits(cat.name_ar)}/></div>
+        <div className="homey-category-image"><Picture kind="category" src={cat.image_path} alt={latinDigits(cat.name_ar)} priority={index < 2}/></div>
         <span>{latinDigits(cat.name_ar)}</span>
       </Link>)}
     </div>
@@ -149,7 +151,7 @@ export function HomeContent() {
     {error && <div className="wrap"><Notice>{error}<button className="text-button" onClick={reload}>إعادة المحاولة</button></Notice></div>}
     {hero && <Hero block={hero}/>}
     <CategoryDiscovery categories={categories}/>
-    <Section title="اختيارات هومي ليك" to="/products"><p className="homey-section-description">حاجات عملية ولطيفة لبيتك، شوف اللي يعجبك.</p>{loading ? <Loading/> : firstProducts.length ? <div className="product-grid homey-first-products">{firstProducts.map(item=><ProductCard key={item.v.id} {...item}/>)}</div> : <Empty/>}</Section>
+    <Section title="اختيارات هومي ليك" to="/products"><p className="homey-section-description">حاجات عملية ولطيفة لبيتك، شوف اللي يعجبك.</p>{loading ? <Loading/> : firstProducts.length ? <div className="product-grid homey-first-products">{firstProducts.map((item,index)=><ProductCard key={item.v.id} {...item} priority={index < 2}/>)}</div> : <Empty/>}</Section>
     {rest.map(block => {
       const rows = selection(block,all,visitSeed);
       if (block.type==='reviews') return <PublicReviews key={block.id} title={latinDigits(block.title)}/>;
