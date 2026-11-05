@@ -573,7 +573,7 @@ export const starterData={
       {
         "id": "budget",
         "type": "budget",
-        "title": "لمسات بأقل من ٥٠٠ جنيه",
+        "title": "لمسات بأقل من 500 جنيه",
         "subtitle": "اختيارات عملية تناسب بيتك",
         "body": "",
         "image": "/images/living.png",

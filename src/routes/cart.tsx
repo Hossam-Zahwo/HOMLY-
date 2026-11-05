@@ -316,7 +316,7 @@ function Cart() {
 
   if (!cart.ready || loading) return <div className="wrap page"><Loading/></div>;
   return <div className="wrap page homey-checkout">
-    <div className="checkout-steps" aria-label="خطوات الشراء"><span className={stage === 0 ? 'active' : ''}>١. السلة</span><span className={stage === 1 ? 'active' : ''}>٢. تأكيد البيانات</span><span>٣. تم الطلب</span></div>
+    <div className="checkout-steps" aria-label="خطوات الشراء"><span className={stage === 0 ? 'active' : ''}>1. السلة</span><span className={stage === 1 ? 'active' : ''}>2. تأكيد البيانات</span><span>3. تم الطلب</span></div>
     <h1>{isDirect ? 'تأكيد طلبك السريع' : 'سلة مشترياتك'}</h1>
     <p className="homey-cart-guide">{isDirect ? 'الطلب ده للمنتج اللي اخترته بس، وسلتك العادية مش هتتغير. اختار الكمية وكمل بياناتك.' : 'راجع منتجاتك والإجمالي، وبعدها اضغط «متابعة الطلب» علشان نوصّلها لك.'}</p>
     {error && <Notice>{error}<button type="button" className="text-button" onClick={reload}>إعادة المحاولة</button></Notice>}

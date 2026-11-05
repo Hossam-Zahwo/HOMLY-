@@ -1,12 +1,14 @@
 import {createFileRoute,Link,useNavigate} from '@tanstack/react-router';
 import {useEffect,useState} from 'react';
-import {ShoppingCart,Check,ChevronLeft,ChevronRight,Zap} from 'lucide-react';
+import {ShoppingCart,Check,ChevronLeft,ChevronRight,Zap,Heart} from 'lucide-react';
 import {toast} from 'sonner';
 import {useCatalog,Picture,Notice,Loading,ProductCard,Section,Quantity,TrustStrip} from '@/components/StoreUI';
 import {imageFor,money,cards} from '@/lib/commerce';
 import {PublicReviews} from '@/components/Reviews';
 import {useCopy} from '@/lib/site';
 import {useCart} from '@/lib/cart';
+import {useFavorites} from '@/lib/favorites';
+import {latinDigits} from '@/lib/digits';
 import {fetchProductSeo,productJsonLd,productSeoTitle,productSeoDescription,productUrl,safeStructuredData} from '@/lib/seo';
 export const Route=createFileRoute('/product/$slug')({
   loader:({params})=>fetchProductSeo(params.slug),
@@ -41,10 +43,12 @@ function ProductPage() {
   const p = products.find((product) => product.variants.some((variant) => variant.slug === slug));
   const v = p?.variants.find((variant) => variant.slug === slug);
   const { add } = useCart();
+  const {has,toggle} = useFavorites();
   const navigate = useNavigate();
   const [photo, setPhoto] = useState(0);
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState('description');
+  const [touchX, setTouchX] = useState<number | null>(null);
 
   useEffect(() => {
     setPhoto(0);
@@ -55,7 +59,7 @@ function ProductPage() {
   if (loading) return <div className="wrap page"><Loading /></div>;
   if (!p || !v) return <div className="wrap empty"><h1>المنتج غير متاح</h1><Link to="/products" className="btn">عودة للمنتجات</Link></div>;
 
-  const title = v.title_override || p.title_ar;
+  const title = latinDigits(v.title_override || p.title_ar);
   const gallery = v.images.length ? v.images : p.images;
   const currentPhoto = Math.min(photo, Math.max(0, gallery.length - 1));
   const available = v.stock_on_hand - v.stock_reserved;
@@ -72,10 +76,15 @@ function ProductPage() {
 
   return <>
     <div className="wrap page product-page">
-      <div className="breadcrumb"><Link to="/">الرئيسية</Link> / <Link to="/products">المنتجات</Link> / {p.title_ar}</div>
+      <div className="breadcrumb"><Link to="/">الرئيسية</Link> / <Link to="/products">المنتجات</Link> / {latinDigits(p.title_ar)}</div>
       <div className="product-detail">
         <div className="product-gallery" aria-label="صور المنتج">
-          <div className="gallery-main">
+          <div className="gallery-main" onTouchStart={e=>setTouchX(e.touches[0]?.clientX ?? null)} onTouchEnd={e=>{
+            if (touchX === null || gallery.length < 2) return;
+            const delta=e.changedTouches[0].clientX-touchX;
+            if(Math.abs(delta)>45) setPhoto(current=> (current+(delta>0?-1:1)+gallery.length)%gallery.length);
+            setTouchX(null);
+          }}>
             <Picture src={gallery[currentPhoto] || imageFor(p, v)} alt={title} className="product-gallery-image" />
             {gallery.length > 1 && <>
               <button type="button" className="gallery-prev icon-button" aria-label="الصورة السابقة" onClick={() => setPhoto((currentPhoto - 1 + gallery.length) % gallery.length)}><ChevronRight /></button>
@@ -90,10 +99,11 @@ function ProductPage() {
         <div className="product-info">
           <span className="eyebrow">اختيارات هومي</span>
           <h1>{title}</h1>
-          {Object.values(v.options).length > 0 && <p className="muted">{Object.values(v.options).join(' / ')}</p>}
+          <button type="button" className={'homey-detail-favorite' + (has(v.id) ? ' is-favorite' : '')} aria-pressed={has(v.id)} onClick={()=>toggle(v.id)}><Heart size={18} fill={has(v.id)?'currentColor':'none'}/>{has(v.id)?'محفوظ في المفضلة':'أضف للمفضلة'}</button>
+          {Object.values(v.options).length > 0 && <p className="muted">{latinDigits(Object.values(v.options).join(' / '))}</p>}
           <div className="detail-price"><strong>{money(v.price_minor)}</strong>{v.compare_at_minor && v.compare_at_minor > v.price_minor ? <del>{money(v.compare_at_minor)}</del> : null}</div>
           <p className="stock-label">{available > 0 ? '● ' + copy('inStock') : copy('outOfStock')}</p>
-          <p className="description">{v.description_override || p.description}</p>
+          <p className="description">{latinDigits(v.description_override || p.description)}</p>
           {p.kind === 'variable' && <div className="variant-section">
             <h3>{copy('productChoices')}</h3>
             <div className="variant-choices">{p.variants.map((choice) => <Link key={choice.id} to="/product/$slug" params={{ slug: choice.slug }} className={'variant-choice ' + (choice.id === v.id ? 'selected' : '')}>
@@ -115,7 +125,7 @@ function ProductPage() {
       </div>
       <section className="product-tabs">
         <div className="tabs"><button className={tab === 'description' ? 'active' : ''} onClick={() => setTab('description')}>{copy('productDescription')}</button><button className={tab === 'specs' ? 'active' : ''} onClick={() => setTab('specs')}>{copy('productSpecs')}</button></div>
-        {tab === 'description' ? <p className="description">{v.description_override || p.description || 'الوصف قيد الإضافة.'}</p> : <dl>{Object.entries({ ...((p.specifications && typeof p.specifications === 'object' && !Array.isArray(p.specifications)) ? p.specifications : {}), ...v.options }).map(([k, val]) => <div key={k}><dt>{k}</dt><dd>{val}</dd></div>)}</dl>}
+        {tab === 'description' ? <p className="description">{latinDigits(v.description_override || p.description || 'الوصف قيد الإضافة.')}</p> : <dl>{Object.entries({ ...((p.specifications && typeof p.specifications === 'object' && !Array.isArray(p.specifications)) ? p.specifications : {}), ...v.options }).map(([k, val]) => <div key={k}><dt>{k}</dt><dd>{val}</dd></div>)}</dl>}
       </section>
       {p.variants.length > 1 && <section className="section"><h2>{copy('sameGroup')}</h2><div className="product-grid">{p.variants.filter((x) => x.id !== v.id).map((x) => <ProductCard p={p} v={x} key={x.id} />)}</div></section>}
     </div>

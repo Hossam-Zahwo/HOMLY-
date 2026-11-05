@@ -111,8 +111,8 @@ export type Order = {
         note?: string;
     }[];
 };
-export const money = (n: number) => new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 2 }).format(n / 100) + ' ج.م';
-export const date = (d: string) => new Intl.DateTimeFormat('ar-EG', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(d));
+export const money = (n: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n / 100) + ' ج.م';
+export const date = (d: string) => new Intl.DateTimeFormat('ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(d));
 export const statuses: Record<string, string> = { new: 'جديد', confirmed: 'تم التأكيد', preparing: 'قيد التجهيز', shipped: 'تم الشحن', delivered: 'تم التسليم', cancelled: 'ملغي', return_requested: 'طلب إرجاع', returned: 'تم الإرجاع', delivery_failed: 'تعذر التسليم' };
 export const paymentLabels: Record<string, string> = { unpaid: 'غير مدفوع', pending: 'بانتظار الدفع', paid: 'مدفوع', failed: 'فشل الدفع', partially_refunded: 'استرداد جزئي', refunded: 'تم الاسترداد' };
 export const transitions: Record<string, string[]> = { new: ['confirmed', 'cancelled'], confirmed: ['preparing', 'cancelled'], preparing: ['shipped', 'cancelled'], shipped: ['delivered', 'delivery_failed', 'return_requested'], delivery_failed: ['shipped', 'return_requested'], delivered: ['return_requested'], return_requested: ['returned'], returned: [], cancelled: [] };

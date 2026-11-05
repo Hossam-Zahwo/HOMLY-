@@ -1206,3 +1206,212 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
 @media(prefers-reduced-motion:reduce){
   .homey-btn-buy-now,.product-card .homey-card-actions .btn {animation:none!important;transition:none!important;transform:none!important}
 }
+
+/* HOMEY storefront refresh · warm cream + olive + cheerful coral (Nov 2026)
+   Customer-facing only: leave the merchant dashboard styling unchanged. */
+.store-header,.store-main,.store-footer{
+  --sage:#4f6035;--line:#eadbd0;--muted:#7b796e;
+  --homey-olive:#4f6035;--homey-coral:#ef876c;--homey-coral-hover:#df745a;
+  --homey-cream:#fff9f3;--homey-ivory:#fffdf9;--homey-ink:#3b3e32;
+}
+.store-main{background:var(--homey-cream);color:var(--homey-ink);min-height:60vh;overflow:clip}
+.store-header{background:rgba(255,250,245,.97);border-color:#efe0d4;box-shadow:0 3px 16px #5645360b}
+.store-header .store-nav{border-color:#f0e2d7;gap:clamp(12px,2.4vw,37px)}
+.store-header .store-nav a{transition:color .18s,transform .18s;white-space:nowrap}
+.store-header .store-nav a:hover{color:var(--homey-coral-hover);transform:translateY(-1px)}
+.store-header .header-main{gap:clamp(16px,4vw,64px)}
+.store-header .search{background:#f9f0e8;border:1px solid #e5d0bf;border-radius:15px}
+.store-header .search:focus-within{border-color:#cfad99;box-shadow:0 0 0 3px #f2cbb537}
+.store-header .search input{color:#414436}
+.store-header .search input:focus{box-shadow:none}
+.store-header .account-link:hover{color:var(--homey-coral-hover)}
+.store-header .header-actions{gap:14px}
+.homey-header-favorites{position:relative;display:inline-flex;gap:6px;align-items:center;justify-content:center;min-width:36px;min-height:40px;color:var(--homey-olive);font-size:12px;font-weight:750;transition:color .18s,transform .18s}
+.homey-header-favorites:hover{color:var(--homey-coral-hover);transform:translateY(-2px)}
+.homey-favorite-count{position:absolute;top:-1px;left:-8px;display:grid;place-items:center;border-radius:99px;background:var(--homey-coral);color:white;min-width:17px;height:17px;font-size:10px;font-weight:800;line-height:1}
+.store-header .homey-cart-count,.cart-link.homey-cart-action .homey-cart-count{background:#ea674d}
+.store-footer{background:#fbf0e6;color:#404332;border-top-color:#eadbd0}
+.store-footer .footer-bottom{border-color:#e7d9cb}
+.store-main .btn:not(.homey-btn-buy-now){border-radius:11px;transition:transform .18s,background .18s,box-shadow .18s}
+.store-main .btn:not(.homey-btn-buy-now):hover:not(:disabled){background:#42562c;box-shadow:0 6px 16px #4c603020}
+.store-main .btn.outline:hover:not(:disabled){background:#f6e9de;color:#465431}
+.store-main .section{padding-block:clamp(18px,2.6vw,33px)}
+.store-main .section-head{margin-bottom:13px;align-items:end}
+.store-main .section-head h2{font-size:clamp(19px,2vw,25px);line-height:1.5;color:var(--homey-olive)}
+.store-main .section-head>a{background:#fff8f3;border:1px solid #ead8c9;border-radius:9px;padding:6px 12px;color:var(--homey-olive);font-weight:750}
+.homey-section-kicker{display:block;font-size:11px;font-weight:750;color:#c5795c;margin-bottom:4px;letter-spacing:.05px}
+.homey-section-description{font-size:12px;color:#807e71;margin:-2px 0 15px;line-height:1.6}
+
+/* The merchant's entire slide image fills the hero; salmon is a transparent overlay ON it.
+   CMS image, CTA and slide controls remain intact. Desktop and phones share the same full-bleed treatment. */
+.homey-new-hero{position:relative;margin-top:18px;margin-bottom:0;max-width:1280px;overflow:hidden;border-radius:20px;background:#f8e5da;border:1px solid #efdbcc;isolation:isolate}
+.homey-new-hero-stage{min-height:290px}
+.homey-new-hero-slide{display:none;position:relative;direction:rtl;height:290px;min-width:0;isolation:isolate;background:#f7e5d6}
+.homey-new-hero-slide.is-current{display:flex;align-items:center;justify-content:flex-start;animation:homeyHeroFade .28s ease-out both}
+.homey-new-hero-picture{position:absolute;inset:0;z-index:0;overflow:hidden;width:100%;height:100%}
+.homey-new-hero-picture picture,.homey-new-hero-picture img{display:block;width:100%;height:100%}
+.homey-new-hero-picture img{object-fit:cover;object-position:center;animation:homeyHeroImage .55s ease both}
+.homey-new-hero-picture::after{content:"";position:absolute;inset:0;background:linear-gradient(to left,rgba(255,224,211,.53) 0%,rgba(255,227,214,.33) 43%,rgba(255,222,202,.08) 78%,transparent 100%);pointer-events:none}
+.homey-new-hero-content{position:relative;z-index:1;direction:rtl;flex:0 1 54%;max-width:660px;padding:15px clamp(19px,5vw,64px);text-align:center}
+.homey-new-hero-content::before{content:"✳";position:absolute;color:#ee866c;opacity:.8;right:13%;top:-1%;font-size:22px;pointer-events:none}
+.homey-new-hero-content h1{font-size:clamp(25px,3.5vw,43px);line-height:1.4;font-weight:800;color:#40512d;margin:5px 0 5px;text-shadow:0 1px 10px rgba(255,249,241,.83)}
+.homey-new-hero-content p{font-size:clamp(12px,1.2vw,15px);color:#484a39;margin-bottom:13px;line-height:1.7;text-shadow:0 1px 8px rgba(255,251,245,.9)}
+.homey-hero-kicker{display:inline-flex;align-items:center;gap:5px;color:#955a41;font-size:11px;font-weight:750;text-shadow:0 1px 9px rgba(255,252,245,.85)}
+.homey-hero-cta{min-height:42px!important;border-radius:11px!important;padding:8px 23px!important;font-weight:800}
+.homey-hero-dots{position:absolute;bottom:10px;right:50%;transform:translateX(50%);display:flex;gap:8px;justify-content:center;z-index:2}
+.homey-hero-dots button{width:9px;height:9px;border-radius:99px;background:#fff9f4;border:1px solid #ccab92;padding:0;transition:width .2s,background .2s}
+.homey-hero-dots button.active{width:26px;background:#596c39;border-color:#596c39}
+@keyframes homeyHeroFade{from{opacity:.6}to{opacity:1}}
+@keyframes homeyHeroImage{from{transform:scale(1.015)}to{transform:scale(1)}}
+
+/* One photo-based category selector immediately below the hero, no duplicate chip row. */
+.homey-category-discovery{padding-top:18px!important;padding-bottom:6px!important}
+.homey-discovery-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:12px}
+.homey-discovery-title h2{font-size:clamp(20px,2vw,25px);margin:0;color:var(--homey-olive);line-height:1.4}
+.homey-discovery-all{display:inline-flex;align-items:center;gap:6px;color:var(--homey-olive);background:#fff9f3;border:1px solid #eddccb;padding:7px 11px;border-radius:9px;font-size:12px;font-weight:750;white-space:nowrap;transition:transform .18s,background .18s}
+.homey-discovery-all:hover{background:#fcece3;transform:translateY(-2px)}
+.homey-category-rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(145px,1fr);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;padding:3px 2px 9px;scrollbar-width:thin;scrollbar-color:#dec4b1 transparent;touch-action:pan-x pan-y}
+.homey-category-tile{display:flex;flex-direction:column;min-width:0;overflow:hidden;border:1px solid #eadccf;background:#fffdf9;border-radius:15px;scroll-snap-align:start;scroll-snap-stop:normal;transition:transform .19s,box-shadow .19s,border-color .19s}
+.homey-category-image{overflow:hidden;background:#f7ede5;aspect-ratio:1.5/1}
+.homey-category-image img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .25s}
+.homey-category-tile span{display:flex;align-items:center;justify-content:center;min-height:40px;padding:8px 7px;text-align:center;font-size:12px;font-weight:750;line-height:1.4;color:#465538}
+@media(hover:hover){.homey-category-tile:hover{border-color:#dfbda8;transform:translateY(-2px);box-shadow:0 8px 18px #88624512}.homey-category-tile:hover img{transform:scale(1.035)}}
+.homey-swipe-hint{display:none;align-items:center;gap:6px;color:#986d5b;font-size:11px;font-weight:650;margin-top:3px}
+
+/* Subtle brighter cards, original product photography and true inventory/prices. */
+.store-main .product-card{position:relative;background:#fffdfa;border:1px solid #ecd8ca;border-radius:16px;box-shadow:0 3px 9px #865a2e09;transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s,border-color .2s;overflow:hidden}
+@media(hover:hover){.store-main .product-card:hover{transform:translateY(-3px);box-shadow:0 11px 25px #6d573119;border-color:#e4bfa7}}
+.store-main .product-card .product-copy,.store-main .mini .product-card .product-copy{padding:11px 12px 12px}
+.store-main .product-card .product-card-title-link h3{color:#363b31;font-weight:750}
+.store-main .product-card .product-card-title-link:hover h3{color:#4d6b3d}
+.store-main .product-card .options-copy{color:#8b8279}
+.store-main .product-card .price-row{margin-bottom:10px;border-top:1px solid #f1e5db;padding-top:6px;height:53px;min-height:53px;color:var(--homey-olive)}
+.store-main .product-card .price-row strong{font-size:clamp(14px,1.25vw,19px);font-weight:850;font-variant-numeric:tabular-nums}
+.store-main .product-card .price-row del{color:#989188}
+.homey-product-media{position:relative;isolation:isolate;min-width:0}
+.store-main .homey-product-media .product-photo{width:100%;aspect-ratio:1/1;border-radius:0;background:#fffdfa}
+.store-main .product-photo img{background:#fffdfa;padding:10px;transition:opacity .2s!important}
+.store-main .product-card:hover .product-photo img{transform:none!important}
+.homey-favorite-toggle{position:absolute;top:9px;left:9px;z-index:3;display:grid;place-items:center;width:37px;height:37px;border:1px solid #f1e0d5;border-radius:50%;background:#fffaf6f2;box-shadow:0 3px 12px #5b322019;color:#e78364;transition:transform .17s,background .17s,color .17s}
+.homey-favorite-toggle:hover{transform:scale(1.1);background:#fff0e7}
+.homey-favorite-toggle:active{transform:scale(.91)}
+.homey-favorite-toggle.is-favorite{color:#e56752;background:#fff0ea}
+.homey-favorite-toggle.is-favorite svg{animation:homeyHeartPop .24s ease-out}
+@keyframes homeyHeartPop{50%{transform:scale(1.22)}}
+.store-main .discount{background:#ffebe4;color:#bd6348;border-radius:8px;font-weight:800}
+.store-main .product-card .homey-card-actions{gap:8px}
+.store-main .product-card .homey-card-actions .btn{border-radius:10px;min-height:39px}
+.store-main .product-card .homey-card-actions .homey-card-add{background:#506337;color:#fff}
+.store-main .product-card .homey-card-actions .homey-card-add:hover:not(:disabled){background:#3e532b}
+.store-main .homey-btn-buy-now{background:#ef886b!important;color:#fff!important;border:1px solid #e9876b!important;font-weight:800!important;box-shadow:0 2px 7px #df987b12}
+.store-main .homey-btn-buy-now:hover:not(:disabled){background:#df7658!important;color:#fff!important;box-shadow:0 6px 15px #d8785a32!important}
+.store-main .homey-btn-buy-now:focus-visible{outline:3px solid #f9c4ad;outline-offset:2px}
+
+/* Budget on desktop remains paginated. On phones every item is swipeable by touch. */
+.store-main .homey-budget-section{background:linear-gradient(120deg,#f6e9de,#f8efe5);border-block:1px solid #eadacc;padding-block:25px}
+.homey-budget-section .budget-intro h2{color:#4f6035}
+.homey-budget-section .budget-products{gap:12px}
+.homey-budget-section .budget-page-status{color:#747c61}
+.homey-budget-section .budget-view-all{color:#4f6035}
+.homey-budget-section .budget-arrow{border-color:#dfc7b4;color:#50603b}
+.homey-warm-story{border-radius:18px;background-color:#f8ece0!important;overflow:hidden;border:1px solid #e8d6c7}
+.homey-final-explore{display:flex;align-items:center;gap:16px;margin-block:28px 55px;padding:24px 27px;background:#f6e9dc;border:1px solid #e7d0bc;border-radius:17px;color:#455a32}
+.homey-final-explore h2{font-size:20px;margin:0}
+.homey-final-explore p{color:#7a705e;margin:0;font-size:12px}
+.homey-final-explore .btn{margin-inline-start:auto;white-space:nowrap}
+.homey-more-bottom{text-align:center;margin-top:18px}
+.homey-more-bottom .btn{min-height:42px}
+.homey-scroll-sentinel{width:100%;height:4px;pointer-events:none}
+.homey-first-skeleton{padding-top:20px}
+.homey-hero-placeholder{height:250px;border-radius:18px;margin-bottom:22px}
+
+/* Favorites page behaves like any other customer catalog. */
+.homey-favorites-page-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:24px}
+.homey-favorites-page-head h1{display:flex;align-items:center;gap:10px;color:#506337;margin:0}
+.homey-favorites-page-head h1 svg{color:#e78364}
+.homey-favorites-page-head p{font-size:13px;color:#807465;margin:5px 0 0}
+.homey-favorites-empty{display:flex;min-height:40vh;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:32px 15px}
+.homey-favorites-empty svg{color:#e78364}
+.homey-favorites-empty h2{margin:12px 0 4px}
+.homey-favorites-empty p{font-size:13px;color:#837b6f}
+.homey-favorites-empty .btn{margin-top:12px}
+.homey-detail-favorite{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid #f0c8b4;border-radius:9px;background:#fff6ef;color:#ce775e;font-size:13px;font-weight:750;margin-bottom:10px;transition:background .18s,transform .18s}
+.homey-detail-favorite:hover{background:#fbe5d6;transform:translateY(-1px)}
+.homey-detail-favorite.is-favorite{color:#d35c4a}
+.store-main .category-banner,.store-main .filters,.store-main .panel{border-radius:15px}
+.store-main .catalog-toolbar select,.store-main .filters select,.store-main .filters input{background:#fffdfa}
+.store-main .category-banner>div{background:linear-gradient(to left,#fff7f0 50%,#fff7f0df 78%,transparent)}
+
+@media(max-width:767px){
+  .store-header .header-main{grid-template-columns:40px minmax(0,1fr) 94px!important;column-gap:4px;padding-block:8px}
+  .store-header .header-main>.logo img{max-height:48px!important;max-width:min(145px,100%)!important}
+  .store-header .header-actions{gap:4px!important}
+  .store-header .header-actions .homey-header-favorites{width:36px;min-width:36px}
+  .store-header .homey-favorite-label{display:none}
+  .store-header .homey-favorite-count{left:0;top:-2px}
+  .store-header .header-main>.search{background:#faf0e7;border-color:#e8d6c8}
+  .store-header .store-nav.is-open{background:#fff9f4;max-height:75dvh}
+  .store-main .section{padding-block:20px}
+  .homey-new-hero{margin-top:10px;margin-bottom:0;border-radius:16px;width:calc(100% - 28px)}
+  .homey-new-hero-stage{min-height:240px}
+  .homey-new-hero-slide{height:240px;display:none}
+  .homey-new-hero-slide.is-current{display:flex;justify-content:center;align-items:flex-end}
+  .homey-new-hero-picture{inset:0;opacity:1;z-index:0}
+  .homey-new-hero-picture img{object-fit:cover;object-position:center}
+  .homey-new-hero-picture::after{background:linear-gradient(to top,rgba(255,223,206,.64),rgba(255,228,215,.3) 45%,rgba(255,230,216,.06) 100%)}
+  .homey-new-hero-content{position:relative;flex:1 1 auto;padding:10px 17px 26px;width:100%;max-width:540px;text-align:center}
+  .homey-new-hero-content::before{top:1%;right:7%}
+  .homey-new-hero-content h1{font-size:clamp(23px,6.5vw,30px);margin:3px 0}
+  .homey-new-hero-content p{font-size:12px;line-height:1.55;margin-bottom:9px}
+  .homey-hero-dots{right:50%;bottom:8px}
+  .homey-category-discovery{padding-top:14px!important;padding-bottom:4px!important}
+  .homey-discovery-heading{margin-bottom:9px}
+  .homey-discovery-title h2{font-size:20px}
+  .homey-discovery-title .homey-section-kicker{font-size:10px}
+  .homey-discovery-all{padding:6px 9px;font-size:11px}
+  .homey-category-rail{display:flex;gap:9px;margin-inline:-14px;padding:3px 14px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .homey-category-rail::-webkit-scrollbar{display:none}
+  .homey-category-tile{flex:0 0 clamp(108px,31vw,140px);min-width:0;border-radius:13px}
+  .homey-category-image{aspect-ratio:1.18/1}
+  .homey-category-tile span{font-size:11px;min-height:37px;padding:6px 4px}
+  .homey-swipe-hint{display:inline-flex}
+  .homey-budget-section .budget-layout{display:block}
+  .homey-budget-section .budget-layout .budget-intro{display:block;margin-bottom:9px}
+  .homey-budget-section .budget-layout .budget-intro h2{margin:0 0 4px}
+  .homey-budget-section .budget-layout .budget-intro p{display:block;font-size:11px;margin:0}
+  .homey-budget-section .budget-topline{display:flex;flex-direction:row-reverse}
+  .homey-budget-section .budget-topline .homey-swipe-hint{margin:0}
+  .homey-budget-section .budget-slider{min-width:0}
+  .budget-band.homey-budget-section .budget-products{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:3px 0 12px;gap:10px;scrollbar-width:none}
+  .homey-budget-section .budget-products::-webkit-scrollbar{display:none}
+  .budget-band.homey-budget-section .budget-products .product-card,.budget-band.homey-budget-section .budget-products .product-card:last-child,.budget-band.homey-budget-section .budget-products .product-card:nth-child(n+3){display:flex!important;flex:0 0 calc(50% - 16px)!important;min-width:0;scroll-snap-align:start;align-self:stretch;height:auto}
+  .homey-budget-section .budget-arrow{display:none!important}
+  .store-main .product-grid{gap:12px 9px}
+  .store-main .product-card .product-copy{padding:9px 9px 10px}
+  .store-main .product-card .price-row{height:48px;min-height:48px;padding-top:5px}
+  .store-main .product-card .price-row strong{font-size:14px}
+  .store-main .product-card .homey-card-actions .btn{min-height:35px;gap:4px}
+  .homey-favorite-toggle{width:33px;height:33px;top:6px;left:6px}
+  .homey-favorite-toggle svg{width:17px;height:17px}
+  .homey-final-explore{margin-block:20px 34px;display:flex;flex-wrap:wrap;padding:18px;gap:9px}
+  .homey-final-explore h2{font-size:18px}
+  .homey-final-explore .btn{width:100%;margin:5px 0 0}
+  .homey-favorites-page-head{align-items:flex-start;flex-wrap:wrap}
+  .homey-favorites-page-head h1{font-size:25px}
+  .homey-favorites-page-head>.btn{width:100%}
+  .product-page .gallery-prev,.product-page .gallery-next{display:none!important}
+  .product-page .thumbnails{overflow-x:auto;scroll-snap-type:x mandatory;touch-action:pan-x;overscroll-behavior-x:contain}
+  .product-page .thumbnails button{scroll-snap-align:start;flex-shrink:0}
+}
+@media(max-width:360px){
+  .homey-category-tile{flex-basis:108px}
+  .homey-new-hero-content h1{font-size:23px}
+  .store-main .product-card .homey-card-actions .btn{font-size:10px;min-height:33px}
+}
+@media(prefers-reduced-motion:reduce){
+  .store-main .product-card,.homey-new-hero-slide,.homey-new-hero-picture img,.homey-favorite-toggle,.homey-category-tile,.homey-hero-dots button,.homey-btn-buy-now,.store-main .btn{animation:none!important;transition:none!important;transform:none!important}
+}
+
+/* Starter hero artwork fills the ENTIRE slider; merchant-uploaded images still take priority. */
+.homey-new-hero-slide.homey-first-visual .homey-new-hero-picture{background:url('./assets/homey-hero-flowers.webp') center/cover no-repeat}
+.homey-new-hero-slide.homey-first-visual .homey-new-hero-picture img{opacity:0}
