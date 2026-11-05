@@ -61,20 +61,88 @@ export function Picture({ src, alt = '', className = '', priority = false, kind 
     />;
 }
 export function ModeNotice() { return !configured ? <div className="mode-notice warning">لم تُضف إعدادات Supabase بعد. أضفها إلى .env.local لعرض البيانات وحفظها.</div> : null; }
+// Re-use a successful public catalog across route changes. Do not refetch eight
+// Supabase tables whenever the customer switches tabs or returns to the browser.
+const CATALOG_CACHE_MS = 120_000;
 let publicCatalogCache: {at: number; promise: Promise<Catalog>} | null = null;
 function sharedCatalog(admin: boolean): Promise<Catalog> {
     if (admin) return catalog(true);
-    if (publicCatalogCache && Date.now() - publicCatalogCache.at < 30000) return publicCatalogCache.promise;
-    const promise = catalog(false).catch(error => { publicCatalogCache = null; throw error; });
+    if (publicCatalogCache && Date.now() - publicCatalogCache.at < CATALOG_CACHE_MS) {
+        return publicCatalogCache.promise;
+    }
+    const promise = catalog(false).catch(error => {
+        publicCatalogCache = null;
+        throw error;
+    });
     publicCatalogCache = {at: Date.now(), promise};
     return promise;
 }
-export function useCatalog(admin = false) { const [data, setData] = useState<Catalog>({ products: [], categories: [] }); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const hasLoadedOnce = useRef(false); const [version, setVersion] = useState(0); useEffect(()=>{const refresh=()=>setVersion(v=>v+1);const invalidate=()=>{publicCatalogCache=null;refresh()};window.addEventListener('homy-catalog-changed',invalidate);window.addEventListener('focus',refresh);const visible=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',visible);return()=>{window.removeEventListener('homy-catalog-changed',invalidate);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',visible)}},[]); useEffect(() => { let live = true; if(!hasLoadedOnce.current) setLoading(true); sharedCatalog(admin).then(d => { if (live) {
-    setData(d);
-    hasLoadedOnce.current=true;
-    setError('');
-} }).catch(e => { if (live) {setData({products:[],categories:[]});setError(explain(e));} }).finally(() => { if (live)
-    setLoading(false); }); return () => { live = false; }; }, [admin, version]); return { ...data, loading, error, reload: () => { publicCatalogCache = null; setVersion(v => v + 1); } }; }
+export function useCatalog(admin = false) {
+    const [data, setData] = useState<Catalog>({products: [], categories: []});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [version, setVersion] = useState(0);
+    const hasLoadedOnce = useRef(false);
+    const lastRefresh = useRef(Date.now());
+
+    useEffect(() => {
+        const invalidate = () => {
+            publicCatalogCache = null;
+            lastRefresh.current = Date.now();
+            setVersion(v => v + 1);
+        };
+        const refreshIfStale = () => {
+            if (document.visibilityState !== 'visible') return;
+            if (Date.now() - lastRefresh.current < CATALOG_CACHE_MS) return;
+            lastRefresh.current = Date.now();
+            setVersion(v => v + 1);
+        };
+        window.addEventListener('homy-catalog-changed', invalidate);
+        window.addEventListener('focus', refreshIfStale);
+        document.addEventListener('visibilitychange', refreshIfStale);
+        return () => {
+            window.removeEventListener('homy-catalog-changed', invalidate);
+            window.removeEventListener('focus', refreshIfStale);
+            document.removeEventListener('visibilitychange', refreshIfStale);
+        };
+    }, []);
+
+    useEffect(() => {
+        let live = true;
+        if (!hasLoadedOnce.current) setLoading(true);
+        // No infinite skeleton if Supabase/network stalls. An eventual successful
+        // response can still update the UI, without requiring a manual reload.
+        const safety = window.setTimeout(() => {
+            if (live && !hasLoadedOnce.current) {
+                setLoading(false);
+                setError('التحميل اتأخر بسبب الاتصال. جرّب إعادة المحاولة.');
+            }
+        }, 13000);
+        sharedCatalog(admin).then(d => {
+            if (!live) return;
+            setData(d);
+            hasLoadedOnce.current = true;
+            setError('');
+        }).catch(e => {
+            if (!live) return;
+            if (!hasLoadedOnce.current) setData({products: [],categories: []});
+            setError(explain(e));
+        }).finally(() => {
+            window.clearTimeout(safety);
+            if (live) setLoading(false);
+        });
+        return () => {
+            live = false;
+            window.clearTimeout(safety);
+        };
+    }, [admin, version]);
+
+    return {...data, loading, error, reload: () => {
+        publicCatalogCache = null;
+        lastRefresh.current = Date.now();
+        setVersion(v => v + 1);
+    }};
+}
 export function Notice({ children, kind = 'error' }: {
     children: ReactNode;
     kind?: string;

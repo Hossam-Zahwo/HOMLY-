@@ -18,7 +18,7 @@ type ProductItem = {p: Product; v: Variant};
 
 /** Keep all manually chosen rows as authored. Give automatic storefront sections room to show more products. */
 function selection(block: HomeBlock, all: ProductItem[], seed: number) {
-  const limit = Math.min(24, Math.max(1, block.source === 'manual' ? block.limit : block.type === 'products' ? Math.max(8, block.limit) : block.type === 'editorial' ? Math.max(4, block.limit) : block.limit));
+  const limit = Math.min(12, Math.max(1, block.source === 'manual' ? block.limit : block.type === 'products' ? Math.max(8, block.limit) : block.type === 'editorial' ? Math.max(4, block.limit) : block.limit));
   const available = all.filter(({v}) => v.stock_on_hand > v.stock_reserved);
   if (block.source === 'manual') {
     return block.variantIds.map(id => available.find(({v}) => v.id === id)).filter((x): x is ProductItem => Boolean(x)).slice(0, limit);

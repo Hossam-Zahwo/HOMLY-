@@ -1508,3 +1508,10 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
   .homey-benefits-track {scroll-behavior:auto!important}
   .homey-benefit-card,.homey-benefit-rule,.homey-benefit-dot{transition:none!important;animation:none!important;transform:none!important}
 }
+
+/* Loading stability patch: storefront cards must never depend on a global
+   IntersectionObserver/MutationObserver to become visible. */
+.reveal-ready,.reveal-pending{opacity:1!important;transform:none!important;visibility:visible!important;filter:none!important;}
+/* Rendering offscreen cards can be skipped by Chromium until scrolled into view. */
+.homey-more-products .product-card{content-visibility:auto;contain-intrinsic-size:auto 440px;}
+@media (prefers-reduced-motion: reduce){.skeleton{animation:none!important;}}

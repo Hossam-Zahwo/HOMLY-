@@ -57,7 +57,7 @@ export function AdminNotifications() {
                 if (soundRef.current)
                     beep();
                 if (document.visibilityState !== 'visible' && !pushRef.current && 'Notification' in window && Notification.permission === 'granted')
-                    new Notification(n.title, { body: n.body, icon: '/favicon.svg', tag: n.id });
+                    new Notification(n.title, { body: n.body, icon: '/icon-192.png', tag: n.id });
             }
         }
         previous.current = new Set(list.map(n => n.id));
