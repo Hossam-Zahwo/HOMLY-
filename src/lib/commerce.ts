@@ -1,3 +1,4 @@
+import { compressStoreImage, type ImagePurpose } from './image-optimization';
 import { supabase, requireConnection } from './supabase';
 export type Category = {
     id: string;
@@ -119,10 +120,36 @@ export const transitions: Record<string, string[]> = { new: ['confirmed', 'cance
 export function explain(e: unknown) { const msg = e instanceof Error ? e.message : String((e as any)?.message || e); return /PGRST|schema cache|does not exist|permission denied|row-level security|Could not find/i.test(msg) ? 'الربط يحتاج تهيئة جداول وصلاحيات أو وظائف هومي في Supabase. لم يتم حفظ أي نجاح وهمي. التفاصيل: ' + msg : msg; }
 function check(error: any) { if (error)
     throw error; }
-async function readCatalogTable(table:string,keys:string[]){const data:any[]=[];for(let offset=0;;offset+=1000){let query=supabase.from(table).select('*');for(const key of keys)query=query.order(key,{ascending:table==='homly_products'&&key==='created_at'?false:true});const response=await query.range(offset,offset+999);check(response.error);const page=response.data||[];data.push(...page);if(page.length<1000)break}return data}
+// Public visitors only download the fields required to render products. Admin retains
+// full rows, so product editing and stock updates keep their existing behavior.
+const publicColumns: Record<string, string> = {
+    homly_products: 'id,title_ar,description,specifications,kind,display_mode,status,deleted_at,created_at',
+    homly_categories: 'id,name_ar,slug,image_path,sort_order,is_active,deleted_at',
+    homly_product_variants: 'id,product_id,sku,slug,title_override,description_override,price_minor,compare_at_minor,stock_on_hand,stock_reserved,status,is_listed,combination_key,sort_order',
+    homly_product_images: 'product_id,variant_id,storage_path,sort_order',
+    homly_product_categories: 'product_id,category_id',
+    homly_product_options: 'id,name_ar',
+    homly_option_values: 'id,label_ar',
+    homly_variant_option_values: 'variant_id,option_id,value_id',
+};
+async function readCatalogTable(table:string, keys:string[], admin:boolean){
+    const data:any[]=[];
+    for(let offset=0;;offset+=1000){
+        let query = supabase.from(table).select(admin ? '*' : publicColumns[table]);
+        if (!admin && (table === 'homly_products' || table === 'homly_product_variants')) query = query.eq('status','published');
+        if (!admin && table === 'homly_categories') query = query.eq('is_active',true);
+        for(const key of keys) query = query.order(key,{ascending:table==='homly_products'&&key==='created_at'?false:true});
+        const response=await query.range(offset,offset+999);
+        check(response.error);
+        const page=response.data||[];
+        data.push(...page);
+        if(page.length<1000)break;
+    }
+    return data;
+}
 export async function catalog(admin=false):Promise<Catalog>{
  requireConnection();const [products,categories,variants,images,links,options,values,choices]=await Promise.all([
- readCatalogTable('homly_products',['created_at','id']),readCatalogTable('homly_categories',['sort_order','id']),readCatalogTable('homly_product_variants',['sort_order','id']),readCatalogTable('homly_product_images',['sort_order','id']),readCatalogTable('homly_product_categories',['product_id','category_id']),readCatalogTable('homly_product_options',['id']),readCatalogTable('homly_option_values',['id']),readCatalogTable('homly_variant_option_values',['variant_id','option_id'])]);
+ readCatalogTable('homly_products',['created_at','id'],admin),readCatalogTable('homly_categories',['sort_order','id'],admin),readCatalogTable('homly_product_variants',['sort_order','id'],admin),readCatalogTable('homly_product_images',['sort_order','id'],admin),readCatalogTable('homly_product_categories',['product_id','category_id'],admin),readCatalogTable('homly_product_options',['id'],admin),readCatalogTable('homly_option_values',['id'],admin),readCatalogTable('homly_variant_option_values',['variant_id','option_id'],admin)]);
  const group=(rows:any[],key:string)=>{const map=new Map<string,any[]>();for(const row of rows){const list=map.get(row[key]);if(list)list.push(row);else map.set(row[key],[row])}return map};
  const imagesByProduct=group(images.filter(i=>!i.variant_id),'product_id'),imagesByVariant=group(images.filter(i=>i.variant_id),'variant_id'),categoriesByProduct=group(links,'product_id'),variantsByProduct=group(variants,'product_id'),choicesByVariant=group(choices,'variant_id'),optionById=new Map(options.map(o=>[o.id,o])),valueById=new Map(values.map(v=>[v.id,v]));
  return {categories:categories.filter(c=>!c.deleted_at&&(admin||c.is_active)).map(c=>({...c,image_path:assetUrl(c.image_path)})),products:products.filter(p=>!p.deleted_at&&(admin||p.status==='published')).map(p=>({...p,categories:(categoriesByProduct.get(p.id)||[]).map(c=>c.category_id),images:(imagesByProduct.get(p.id)||[]).map(i=>assetUrl(i.storage_path)),variants:(variantsByProduct.get(p.id)||[]).filter(v=>admin||v.status==='published').map(v=>({...v,images:(imagesByVariant.get(v.id)||[]).map(i=>assetUrl(i.storage_path)),options:Object.fromEntries((choicesByVariant.get(v.id)||[]).map(c=>[optionById.get(c.option_id)?.name_ar||'الاختيار',valueById.get(c.value_id)?.label_ar||'']))}))}))};
@@ -153,8 +180,88 @@ export function storedImagePath(url:string):string {
 }
 export async function saveProduct(p: Product) { requireConnection(); const payload={...p,images:p.images.map(storedImagePath),variants:p.variants.map(v=>({...v,images:v.images.map(storedImagePath)}))}; const { data, error } = await supabase.rpc('homly_save_product', { payload }); check(error); if(typeof data!=='string'||!data)throw new Error('لم يصل معرف المنتج المحفوظ من قاعدة البيانات'); const saved=await supabase.from('homly_products').select('id').eq('id',data).single();check(saved.error);if(!saved.data?.id)throw new Error('تعذر التحقق من حفظ المنتج؛ حدّث القائمة قبل إعادة الحفظ'); window.dispatchEvent(new Event('homy-catalog-changed')); return data; }
 export async function saveCategory(c: Partial<Category>) { requireConnection(); const {data,error}=await supabase.from('homly_categories').upsert({ ...c,id:c.id||undefined }).select('id').single();check(error);if(!data?.id)throw new Error('لم يصل تأكيد حفظ القسم من قاعدة البيانات'); }
-export async function uploadImage(file: File) { if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024)
-    throw new Error('الصورة يجب أن تكون JPG أو PNG أو WebP وبحد أقصى 5MB'); ; requireConnection(); const path = crypto.randomUUID() + '.' + file.type.split('/')[1]; const { error } = await supabase.storage.from('homly-products').upload(path, file, { upsert: false, contentType: file.type }); check(error); return path; }
+/** Resize/compress before upload; immutable unique paths allow strong caching. */
+export async function uploadImage(file: File, purpose: ImagePurpose = 'product') {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 15 * 1024 * 1024)
+        throw new Error('الصورة لازم تكون JPG أو PNG أو WebP وبحجم أقل من 15MB قبل الضغط');
+    requireConnection();
+    const optimized = await compressStoreImage(file, purpose);
+    if (optimized.size > 5 * 1024 * 1024) throw new Error('تعذر ضغط الصورة تحت 5MB. اختار صورة أصغر أو صدّرها بصيغة WebP.');
+    const extension = optimized.type === 'image/webp' ? 'webp' : file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
+    const path = crypto.randomUUID() + '.' + extension;
+    const { error } = await supabase.storage.from('homly-products').upload(path, optimized, {
+        upsert: false,
+        contentType: optimized.type || file.type,
+        cacheControl: '31536000',
+    });
+    check(error);
+    return path;
+}
+
+/** Prepare a lighter copy of an already-uploaded CMS/category image. Callers
+ * must save/publish their updated path; this never mutates the original object. */
+export async function optimizeStoredAsset(image: string, purpose: ImagePurpose = 'product') {
+    requireConnection();
+    const url = assetUrl(image);
+    if (!url.includes('/storage/v1/object/public/homly-products/'))
+        throw new Error('الصورة دي مش مرفوعة على تخزين هومي. اختار الملف الأصلي وارفعه تاني علشان يتضغط تلقائيًا.');
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('تعذر تحميل الصورة: HTTP ' + response.status);
+    const original = await response.blob();
+    if (!['image/jpeg','image/png','image/webp'].includes(original.type)) throw new Error('صيغة الصورة غير مدعومة للضغط.');
+    const compressed = await compressStoreImage(original, purpose);
+    if (compressed.type !== 'image/webp' || compressed.size >= original.size * 0.92)
+        return {path: image, optimized: false, savedBytes: 0};
+    const path = crypto.randomUUID() + '.webp';
+    const {error} = await supabase.storage.from('homly-products').upload(path, compressed, {
+        upsert: false, contentType: 'image/webp', cacheControl: '31536000',
+    });
+    check(error);
+    return {path, optimized: true, savedBytes: original.size - compressed.size};
+}
+
+/**
+ * Opt-in, non-destructive optimization of the images already used by a product.
+ * Old objects are never overwritten or removed. If the product save fails, the
+ * original product and every old image remain untouched.
+ */
+export async function optimizeExistingProductImages(product: Product) {
+    requireConnection();
+    const allImages = [...product.images, ...product.variants.flatMap(v => v.images)];
+    const replacements = new Map<string, string>();
+    let optimizedCount = 0;
+    let bytesBefore = 0;
+    let bytesAfter = 0;
+    for (const image of new Set(allImages)) {
+        const url = assetUrl(image);
+        // Only process existing objects from Homey's own public Storage bucket.
+        if (!url.includes('/storage/v1/object/public/homly-products/')) continue;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('تعذر تحميل صورة قديمة للضغط: ' + response.status);
+        const original = await response.blob();
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(original.type)) continue;
+        const compressed = await compressStoreImage(original, 'product');
+        if (compressed.type !== 'image/webp' || compressed.size >= original.size * 0.92) continue;
+        const freshPath = crypto.randomUUID() + '.webp';
+        const {error} = await supabase.storage.from('homly-products').upload(freshPath, compressed, {
+            upsert: false, contentType: 'image/webp', cacheControl: '31536000',
+        });
+        check(error);
+        replacements.set(image, freshPath);
+        optimizedCount++;
+        bytesBefore += original.size;
+        bytesAfter += compressed.size;
+    }
+    if (optimizedCount) {
+        const newProduct = {
+            ...product,
+            images: product.images.map(img => replacements.get(img) || img),
+            variants: product.variants.map(v => ({...v, images: v.images.map(img => replacements.get(img) || img)})),
+        };
+        await saveProduct(newProduct);
+    }
+    return {optimizedCount, bytesBefore, bytesAfter};
+}
 export async function orders(): Promise<Order[]> { requireConnection(); const { data, error } = await supabase.from('homly_orders').select('*,homly_order_items(*),homly_order_status_history(*),homly_order_item_checks(*)').order('created_at', { ascending: false }); check(error); return (data || []).map(o => ({ ...o, items: (o.homly_order_items||[]).map((i:any)=>({...i,image_snapshot:assetUrl(i.image_snapshot)})), history: o.homly_order_status_history, checks: o.homly_order_item_checks || [] })); }
 /** Only unfulfilled, unpaid orders can be permanently removed as test orders. */
 export function isDeletableTestOrder(order: Order): boolean {

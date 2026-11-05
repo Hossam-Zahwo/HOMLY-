@@ -85,7 +85,7 @@ function ProductPage() {
             if(Math.abs(delta)>45) setPhoto(current=> (current+(delta>0?-1:1)+gallery.length)%gallery.length);
             setTouchX(null);
           }}>
-            <Picture src={gallery[currentPhoto] || imageFor(p, v)} alt={title} className="product-gallery-image" />
+            <Picture priority kind="product" src={gallery[currentPhoto] || imageFor(p, v)} alt={title} className="product-gallery-image" />
             {gallery.length > 1 && <>
               <button type="button" className="gallery-prev icon-button" aria-label="الصورة السابقة" onClick={() => setPhoto((currentPhoto - 1 + gallery.length) % gallery.length)}><ChevronRight /></button>
               <button type="button" className="gallery-next icon-button" aria-label="الصورة التالية" onClick={() => setPhoto((currentPhoto + 1) % gallery.length)}><ChevronLeft /></button>
@@ -93,7 +93,7 @@ function ProductPage() {
             </>}
           </div>
           {gallery.length > 1 && <div className="thumbnails" aria-label="اختيار صورة المنتج">
-            {gallery.map((src, i) => <button type="button" className={currentPhoto === i ? 'selected' : ''} key={src + i} onClick={() => setPhoto(i)} aria-label={'صورة ' + (i + 1)} aria-pressed={currentPhoto === i}><Picture src={src} alt="" /></button>)}
+            {gallery.map((src, i) => <button type="button" className={currentPhoto === i ? 'selected' : ''} key={src + i} onClick={() => setPhoto(i)} aria-label={'صورة ' + (i + 1)} aria-pressed={currentPhoto === i}><Picture kind="thumbnail" src={src} alt="" /></button>)}
           </div>}
         </div>
         <div className="product-info">
@@ -107,7 +107,7 @@ function ProductPage() {
           {p.kind === 'variable' && <div className="variant-section">
             <h3>{copy('productChoices')}</h3>
             <div className="variant-choices">{p.variants.map((choice) => <Link key={choice.id} to="/product/$slug" params={{ slug: choice.slug }} className={'variant-choice ' + (choice.id === v.id ? 'selected' : '')}>
-              <Picture src={imageFor(p, choice)} alt="" />
+              <Picture kind="thumbnail" src={imageFor(p, choice)} alt="" />
               <span>{Object.values(choice.options).join(' / ') || choice.title_override || choice.sku}<small>{money(choice.price_minor)}{choice.stock_on_hand <= choice.stock_reserved ? ' — غير متوفر' : ''}</small></span>
               {choice.id === v.id && <Check size={17} />}
             </Link>)}</div>

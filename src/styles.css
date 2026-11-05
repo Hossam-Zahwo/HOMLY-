@@ -1415,3 +1415,96 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
 /* Starter hero artwork fills the ENTIRE slider; merchant-uploaded images still take priority. */
 .homey-new-hero-slide.homey-first-visual .homey-new-hero-picture{background:url('./assets/homey-hero-flowers.webp') center/cover no-repeat}
 .homey-new-hero-slide.homey-first-visual .homey-new-hero-picture img{opacity:0}
+
+/* HOMEY benefits redesign — cream / olive / peach, inspired by the approved mockup.
+   All visuals and animation are CSS/SVG so this section adds no heavy downloads. */
+.store-main .homey-benefits {
+  --benefit-olive:#414b2f;
+  --benefit-peach:#f3a38b;
+  position:relative; isolation:isolate; overflow:hidden;
+  margin-block:28px 38px; padding:37px 35px 34px;
+  background:radial-gradient(ellipse at 48% 22%,#fffdfa 0%,#fff8f1 57%,#fff3eb 100%);
+  border:1px solid #f2e5d9; border-radius:30px;
+}
+.homey-benefits:after {
+  content:""; position:absolute;z-index:-1;pointer-events:none;
+  width:265px;height:170px;bottom:-120px;right:-55px;
+  background:#ffd9c9; border-radius:60% 40% 30% 70%;transform:rotate(-23deg);opacity:.78;
+}
+.homey-benefits-leaf {position:absolute;pointer-events:none;z-index:-1;color:#a2b48b;opacity:.43}
+.homey-benefits-leaf-top {width:126px;height:126px;top:23px;left:-27px;transform:rotate(-35deg)}
+.homey-benefits-leaf-bottom {width:118px;height:118px;bottom:-41px;right:-27px;transform:rotate(35deg)}
+.homey-benefits-heading {position:relative;z-index:2;text-align:center;margin-bottom:29px}
+.store-main .homey-benefits-heading h2 {
+  margin:0;color:var(--benefit-olive);font-family:'Cairo',sans-serif;
+  font-size:clamp(24px,3.3vw,39px);font-weight:800;line-height:1.6;
+}
+.homey-benefits-spark {position:absolute;top:-5px;right:calc(50% + 180px);color:#ef936f;font-size:26px;transform:rotate(-20deg)}
+.homey-benefits-underline {display:block;width:min(200px,42%);height:19px;margin:-1px auto 0;transform:rotate(-3deg)}
+.homey-benefits-track {
+  position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:17px;direction:rtl;max-width:1120px;margin-inline:auto;
+}
+.homey-benefit-card {
+  position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  min-width:0;min-height:229px;padding:23px 17px 27px;text-align:center;
+  border:1px solid #f3e4db;border-radius:28px;
+  background:rgba(255,253,249,.88);color:var(--benefit-olive);
+  box-shadow:0 9px 22px rgba(124,89,59,.08),0 2px 5px rgba(130,96,75,.04);
+  transition:transform .4s cubic-bezier(.2,.8,.2,1),border-color .35s ease,box-shadow .35s ease;
+  will-change:auto;
+}
+.homey-benefit-card:before {
+  content:"";position:absolute;right:-15px;bottom:-26px;width:100px;height:62px;
+  background:#ffdfd1;border-radius:58% 42% 55% 45%;transform:rotate(-22deg);opacity:0;
+  transition:opacity .3s ease;pointer-events:none;
+}
+.homey-benefit-card.is-active {transform:translateY(-3px);border-color:#eac6b8;box-shadow:0 12px 24px rgba(116,82,48,.11),0 1px 4px #c8a68919}
+.homey-benefit-card.is-active:before {opacity:.55}
+@media (hover:hover) and (pointer:fine){
+  .homey-benefit-card:hover {transform:translateY(-5px);border-color:#f2b7a3;box-shadow:0 15px 29px rgba(120,84,60,.13)}
+  .homey-benefit-card:hover:before {opacity:.68}
+}
+.homey-benefit-icon {position:relative;display:grid;place-items:center;width:84px;height:78px;margin:0 0 13px;color:#4a5835;isolation:isolate}
+.homey-benefit-icon:before {content:"";position:absolute;z-index:-1;width:73px;height:62px;border-radius:52% 48% 62% 38%;background:linear-gradient(145deg,#fff0e3,#ffe6d9);transform:rotate(-16deg)}
+.homey-benefit-icon>svg {position:relative;z-index:1;stroke-linecap:round;stroke-linejoin:round}
+.homey-benefit-card:nth-child(2) .homey-benefit-icon>svg {color:#4c5a37}
+.homey-benefit-rays:before,.homey-benefit-rays:after {content:"";position:absolute;top:3px;right:3px;width:4px;height:13px;background:#ef9677;border-radius:4px;transform:rotate(40deg)}
+.homey-benefit-rays:after {top:13px;right:-7px;height:9px;transform:rotate(80deg)}
+.store-main .homey-benefit-card h3 {margin:0 0 6px;color:var(--benefit-olive);font-family:'Cairo',sans-serif;font-size:clamp(17px,1.65vw,22px);font-weight:800;line-height:1.55}
+.store-main .homey-benefit-card p {margin:0;max-width:265px;color:#626451;font-family:'Cairo',sans-serif;font-size:clamp(12px,1.16vw,15px);font-weight:500;line-height:1.85}
+.homey-benefit-rule {display:block;align-self:center;width:39px;height:3px;border-radius:9px;margin-top:auto;background:#f1b69b;opacity:.9;transform:translateY(13px);transition:width .3s,background .3s}
+.homey-benefit-card.is-active .homey-benefit-rule {width:57px;background:#eb9477}
+.homey-benefits-pagination {display:flex;justify-content:center;align-items:center;gap:9px;margin-top:22px}
+.homey-benefit-dot {width:9px;height:9px;padding:0;background:#ebd3c3;border-radius:99px;border:0;transition:width .26s,background .26s;cursor:pointer}
+.homey-benefit-dot.is-active {width:27px;background:#ed967a}
+.homey-benefit-dot:focus-visible {outline:3px solid #bfa889;outline-offset:4px}
+
+@media (max-width:767px){
+  .store-main .homey-benefits {width:calc(100% - 28px);margin-block:19px 27px;padding:23px 0 22px;border-radius:22px;overflow:hidden}
+  .store-main .homey-benefits-heading h2 {font-size:clamp(22px,6vw,29px)}
+  .homey-benefits-heading {margin-bottom:19px;padding-inline:12px}
+  .homey-benefits-spark {right:calc(50% + 111px);top:0;font-size:19px}
+  .homey-benefits-underline {width:140px;height:15px}
+  .homey-benefits-track {
+    display:flex;grid-template-columns:none;gap:11px;max-width:none;
+    overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;scroll-padding-inline:10%;
+    scroll-behavior:smooth;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+    touch-action:pan-x pan-y;padding:3px 10% 13px;margin:0;
+  }
+  .homey-benefits-track::-webkit-scrollbar {display:none}
+  .homey-benefit-card {flex:0 0 80%;min-height:212px;padding:20px 12px 21px;scroll-snap-align:center;scroll-snap-stop:normal;border-radius:24px}
+  .homey-benefit-icon {width:72px;height:66px;margin-bottom:12px}
+  .homey-benefit-icon:before {width:62px;height:54px}
+  .homey-benefit-icon>svg {width:36px;height:36px}
+  .store-main .homey-benefit-card h3 {font-size:clamp(16px,4.4vw,20px)}
+  .store-main .homey-benefit-card p {font-size:clamp(11px,3.3vw,14px);line-height:1.75;max-width:235px}
+  .homey-benefits-pagination {margin-top:9px;gap:8px}
+  .homey-benefits-leaf-top {width:94px;height:94px;top:0;left:-35px}
+  .homey-benefits-leaf-bottom {width:82px;height:82px;bottom:-19px;right:-22px}
+}
+@media(prefers-reduced-motion:reduce){
+  .homey-benefits-track {scroll-behavior:auto!important}
+  .homey-benefit-card,.homey-benefit-rule,.homey-benefit-dot{transition:none!important;animation:none!important;transform:none!important}
+}

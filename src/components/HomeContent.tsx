@@ -8,8 +8,11 @@ import {budgetProducts} from '@/lib/budget-products';
 import {rotateHomeCards} from '@/lib/home-product-rotation';
 import {latinDigits} from '@/lib/digits';
 import {useIsMobile} from '@/hooks/use-mobile';
-import {useCatalog, Section, Picture, ProductCard, Notice, Loading, Empty, TrustStrip} from './StoreUI';
+import {assetUrl} from '@/lib/commerce';
+import {supabaseResponsiveImage} from '@/lib/image-optimization';
+import {useCatalog, Section, Picture, ProductCard, Notice, Loading, Empty} from './StoreUI';
 import {PublicReviews} from './Reviews';
+import {HomeyBenefits} from './HomeyBenefits';
 
 type ProductItem = {p: Product; v: Variant};
 
@@ -49,7 +52,11 @@ function Hero({block}: {block: HomeBlock}) {
     }}>
     <div className="homey-new-hero-stage">
       {slides.map((slide,index) => <article key={slide.id} className={'homey-new-hero-slide' + (index === activeIndex ? ' is-current' : '') + (index === 0 && /^\/images\/(kitchen|living|storage)\.png$/.test(slide.image) ? ' homey-first-visual' : '')} aria-hidden={index !== activeIndex}>
-        <div className="homey-new-hero-picture"><picture>{slide.mobileImage && <source media="(max-width:767px)" srcSet={slide.mobileImage}/>}<Picture priority={index === 0} src={slide.image} alt={latinDigits(slide.alt || slide.title)}/></picture></div>
+        <div className="homey-new-hero-picture">{index === activeIndex && !(index === 0 && /^\/images\/(kitchen|living|storage)\.png$/.test(slide.image)) &&
+          <picture>{slide.mobileImage && <source media="(max-width:767px)" srcSet={supabaseResponsiveImage(assetUrl(slide.mobileImage), 960)}/>}
+            <Picture priority={true} kind="hero" src={slide.image} alt={latinDigits(slide.alt || slide.title)}/>
+          </picture>}
+        </div>
         <div className="homey-new-hero-content">
           <span className="homey-hero-kicker"><Sparkles size={14}/> {latinDigits(slide.title)}</span>
           <h1>{latinDigits(block.title)}</h1>
@@ -75,7 +82,7 @@ function CategoryDiscovery({categories}: {categories: Category[]}) {
     </div>
     <div className="homey-category-rail" aria-label="أقسام هومي - اسحب لعرض المزيد">
       {categories.map((cat,index) => <Link to="/category/$slug" params={{slug:cat.slug}} key={cat.id} className="homey-category-tile">
-        <div className="homey-category-image"><Picture src={cat.image_path} alt={latinDigits(cat.name_ar)} priority={index === 0}/></div>
+        <div className="homey-category-image"><Picture kind="category" src={cat.image_path} alt={latinDigits(cat.name_ar)}/></div>
         <span>{latinDigits(cat.name_ar)}</span>
       </Link>)}
     </div>
@@ -146,10 +153,10 @@ export function HomeContent() {
     {rest.map(block => {
       const rows = selection(block,all,visitSeed);
       if (block.type==='reviews') return <PublicReviews key={block.id} title={latinDigits(block.title)}/>;
-      if (block.type==='features') return <section key={block.id} className="wrap section homey-benefits"><h2>{latinDigits(block.title)}</h2><TrustStrip/></section>;
+      if (block.type==='features') return <HomeyBenefits key={block.id} title={block.title}/>;
       if (block.type==='categories') return null; // Already rendered the complete, swipeable category row above.
       if (block.type==='text') return <section key={block.id} className={'cms-text wrap homey-warm-story '+(block.image?'with-image':'')} style={block.image?{backgroundImage:`linear-gradient(to left,#fff4ebe8,#fff4eb80),url("${block.image.replace(/["\\\n\r]/g,'')}")`}:undefined}><div><h2>{latinDigits(block.title)}</h2><p>{latinDigits(block.subtitle)}</p><p className="preserve-lines">{latinDigits(block.body)}</p>{block.showButton && <a href={safeHref(block.href)} className="btn">{latinDigits(block.buttonLabel)}</a>}</div></section>;
-      if (block.type==='editorial') return <section key={block.id} className="comfort-grid wrap"><div className="editorial"><Picture src={block.image} alt={block.title}/><div><h2>{latinDigits(block.title)}</h2><p>{latinDigits(block.subtitle)}</p>{block.showButton && <a href={safeHref(block.href)} className="btn">{latinDigits(block.buttonLabel)} <ArrowLeft size={16}/></a>}</div></div><div className="product-grid mini">{rows.map(item=><ProductCard key={item.v.id} {...item}/>)}</div></section>;
+      if (block.type==='editorial') return <section key={block.id} className="comfort-grid wrap"><div className="editorial"><Picture kind="hero" src={block.image} alt={block.title}/><div><h2>{latinDigits(block.title)}</h2><p>{latinDigits(block.subtitle)}</p>{block.showButton && <a href={safeHref(block.href)} className="btn">{latinDigits(block.buttonLabel)} <ArrowLeft size={16}/></a>}</div></div><div className="product-grid mini">{rows.map(item=><ProductCard key={item.v.id} {...item}/>)}</div></section>;
       if (block.type==='budget') return <BudgetSlider key={block.id} block={block} products={products} loading={loading} visitSeed={visitSeed}/>;
       return <Section key={block.id} title={latinDigits(block.title)} to={safeHref(block.href)} showAction={block.showButton} actionLabel={latinDigits(block.buttonLabel)}><p className="homey-section-description">{latinDigits(block.subtitle)}</p>{loading ? <Loading/> : rows.length ? <div className="product-grid">{rows.map(item=><ProductCard key={item.v.id} {...item}/>)}</div> : <Empty/>}</Section>;
     })}

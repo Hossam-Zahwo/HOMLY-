@@ -5,17 +5,61 @@ import { catalog, explain, money, imageFor, assetUrl, type Catalog, type Product
 import { useCart } from '@/lib/cart';
 import {useFavorites} from '@/lib/favorites';
 import {latinDigits} from '@/lib/digits';
+import {supabaseResponsiveImage,hasResponsiveTransform} from '@/lib/image-optimization';
 import { configured } from '@/lib/supabase';
 import { useSite, useCopy } from '@/lib/site';
 import { safeHref, whatsappHref } from '@/lib/content-model';
 import { toast } from 'sonner';
 export function Logo() { const { config } = useSite(); return <Link to="/" className="logo" aria-label={config.brand.name + ' الرئيسية'}>{config.brand.logo ? <img src={assetUrl(config.brand.logo)} alt={config.brand.name} style={{width:"auto",height:"auto",maxHeight:64,maxWidth:190,objectFit:"contain"}}/> : <><b>{config.brand.name}</b><small>{config.brand.latin}</small></>}</Link>; }
-export function Picture({ src, alt = '', className = '', priority = false }: {
+/**
+ * Loading policy: only the first visible hero/product-detail image is urgent.
+ * On Supabase Pro, setting VITE_HOMEY_IMAGE_TRANSFORMS=true additionally enables
+ * width-specific CDN images. The default remains safe for free accounts.
+ */
+export function Picture({ src, alt = '', className = '', priority = false, kind = 'product' }: {
     src?: string;
     alt?: string;
     className?: string;
     priority?: boolean;
-}) { return <img src={assetUrl(src || '')} alt={alt} className={className} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} decoding="async" onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder.svg'; }}/>; }
+    kind?: 'product' | 'hero' | 'category' | 'thumbnail';
+}) {
+    const original = assetUrl(src || '');
+    const responsive = hasResponsiveTransform(original);
+    const widths = kind === 'hero' ? [640, 960, 1440, 1920]
+        : kind === 'category' ? [180, 320, 480, 720]
+        : kind === 'thumbnail' ? [96, 160, 240]
+        : [320, 480, 720, 960, 1400];
+    const sizes = kind === 'hero' ? '(max-width: 767px) 100vw, 1100px'
+        : kind === 'category' ? '(max-width: 767px) 32vw, 190px'
+        : kind === 'thumbnail' ? '96px'
+        : '(max-width: 767px) 48vw, (max-width: 1100px) 30vw, 260px';
+    const preferredWidth = kind === 'hero' ? 1440 : kind === 'thumbnail' ? 160 : kind === 'category' ? 320 : 720;
+    const imageSrc = responsive ? supabaseResponsiveImage(original, preferredWidth) : original;
+    const srcSet = responsive ? widths.map(width => `${supabaseResponsiveImage(original, width)} ${width}w`).join(', ') : undefined;
+    return <img
+        src={imageSrc}
+        srcSet={srcSet}
+        sizes={responsive ? sizes : undefined}
+        width={kind === 'hero' ? 1600 : kind === 'category' ? 480 : kind === 'thumbnail' ? 120 : 720}
+        height={kind === 'hero' ? 740 : kind === 'category' ? 320 : kind === 'thumbnail' ? 120 : 720}
+        alt={alt} className={className}
+        loading={priority ? 'eager' : 'lazy'}
+        fetchPriority={priority ? 'high' : undefined}
+        decoding="async"
+        onError={e => {
+            const img = e.currentTarget;
+            if (responsive && img.dataset.homeyOriginalFallback !== '1') {
+                img.dataset.homeyOriginalFallback = '1';
+                img.parentElement?.querySelectorAll('source').forEach(source => source.remove());
+                img.srcSet = '';
+                img.src = original;
+                return;
+            }
+            img.onerror = null;
+            img.src = '/placeholder.svg';
+        }}
+    />;
+}
 export function ModeNotice() { return !configured ? <div className="mode-notice warning">لم تُضف إعدادات Supabase بعد. أضفها إلى .env.local لعرض البيانات وحفظها.</div> : null; }
 let publicCatalogCache: {at: number; promise: Promise<Catalog>} | null = null;
 function sharedCatalog(admin: boolean): Promise<Catalog> {
