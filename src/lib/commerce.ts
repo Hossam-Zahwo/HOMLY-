@@ -180,6 +180,18 @@ export async function catalog(admin=false):Promise<Catalog>{
    const response = await fetch('/emergency/catalog-full.json', {cache: 'force-cache'});
    if (!response.ok) throw new Error('تعذر تحميل نسخة المنتجات المؤقتة');
    const snapshot = await response.json() as Catalog;
+   // Recover only image fallbacks for identical product/variant IDs from the
+   // reviewed media snapshot; never restore stale prices, stock or order data.
+   const workingImages = await fetch('/emergency/catalog-working-images.json', {cache: 'force-cache'})
+     .then(res => res.ok ? res.json() as Promise<Catalog> : null)
+     .catch(() => null);
+   const restoredImageByVariant = new Map<string, string>();
+   for (const product of workingImages?.products || []) {
+     for (const variant of product.variants || []) {
+       const fallback = (variant as Variant & {legacy_image_url?: string}).legacy_image_url;
+       if (fallback && /^https:\\/\\//.test(fallback)) restoredImageByVariant.set(product.id + ':' + variant.id, fallback);
+     }
+   }
    const categoryImageFallback: Record<string, string> = {lighting:'/images/jars.png', bathroom:'/images/towels.png'};
    return {categories: snapshot.categories.map(c => ({...c,
      image_path: assetUrl(c.image_path).startsWith('/placeholder') ? categoryImageFallback[c.slug] || '/images/living.png' : assetUrl(c.image_path)
@@ -187,7 +199,7 @@ export async function catalog(admin=false):Promise<Catalog>{
      images: p.images.map(src => assetUrl(src)),
      variants: p.variants.map(v => {
        const fromMainBucket = v.images.map(src => assetUrl(src)).filter(src => src && src !== '/placeholder.svg');
-       const fromOldInventory = (v as Variant & {legacy_image_url?:string}).legacy_image_url;
+       const fromOldInventory = (v as Variant & {legacy_image_url?:string}).legacy_image_url || restoredImageByVariant.get(p.id + ':' + v.id);
        // Only show fallback photos for matching SKUs that were manually reviewed.
        // The current store's images take precedence as soon as their origin is available.
        const imageUrls = fromMainBucket.length ? fromMainBucket : fromOldInventory ? [fromOldInventory] : [];
