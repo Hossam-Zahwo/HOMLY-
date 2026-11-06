@@ -171,15 +171,16 @@ export async function catalog(admin=false):Promise<Catalog>{
 export function assetUrl(path: string | null) {
  if (!path) return '/placeholder.svg';
  const source = String(path);
- const fromOld = /^https?:\\/\\/hlcatmtjrmqaakwvfkwf\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/homly-products\\//i;
+ const oldPrefix = 'https://hlcatmtjrmqaakwvfkwf.supabase.co/storage/v1/object/public/homly-products/';
+ const newPrefix = 'https://tzbckxumztwwyytryarw.supabase.co/storage/v1/object/public/homly-products/';
  const onNew = import.meta.env.VITE_HOMEY_IMAGES_ON_NEW_PROJECT === 'true';
  const oldReady = import.meta.env.VITE_HOMEY_STORAGE_ORIGINAL_READY === 'true';
- if (fromOld.test(source)) {
-   if (onNew) return source.replace(fromOld, 'https://tzbckxumztwwyytryarw.supabase.co/storage/v1/object/public/homly-products/');
+ if (source.startsWith(oldPrefix)) {
+   if (onNew) return newPrefix + source.slice(oldPrefix.length);
    return oldReady ? source : '/placeholder.svg';
  }
- if (/^https?:\\/\\//.test(source) || source.startsWith('/')) return source;
- if (onNew) return 'https://tzbckxumztwwyytryarw.supabase.co/storage/v1/object/public/homly-products/' + source.replace(/^\\/+/, '');
+ if (source.startsWith('https://') || source.startsWith('http://') || source.startsWith('/')) return source;
+ if (onNew) return newPrefix + source.replace(/^[/]+/, '');
  return oldReady ? supabase.storage.from('homly-products').getPublicUrl(source).data.publicUrl : '/placeholder.svg';
 }
 export const availableStock = (v: Variant) => Math.max(0, Number(v.stock_on_hand || 0) - Number(v.stock_reserved || 0));
