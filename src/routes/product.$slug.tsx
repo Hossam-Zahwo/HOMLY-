@@ -1,4 +1,4 @@
-import {createFileRoute,Link} from '@tanstack/react-router';
+import {createFileRoute,Link,useNavigate} from '@tanstack/react-router';
 import {useEffect,useState} from 'react';
 import {ShoppingCart,Check,ChevronLeft,ChevronRight,Zap,Heart} from 'lucide-react';
 import {toast} from 'sonner';
@@ -7,6 +7,7 @@ import {imageFor,money,cards} from '@/lib/commerce';
 import {PublicReviews} from '@/components/Reviews';
 import {useCopy} from '@/lib/site';
 import {useFavorites} from '@/lib/favorites';
+import {useCart} from '@/lib/cart';
 import {latinDigits} from '@/lib/digits';
 import {fetchProductSeo,productJsonLd,productSeoTitle,productSeoDescription,productUrl,safeStructuredData} from '@/lib/seo';
 export const Route=createFileRoute('/product/$slug')({
@@ -61,11 +62,17 @@ function ProductPage() {
   const currentPhoto = Math.min(photo, Math.max(0, gallery.length - 1));
   const available = v.stock_on_hand - v.stock_reserved;
   const related = cards(products.filter((product) => product.id !== p.id && product.categories.some((id) => p.categories.includes(id)))).slice(0, 4);
+  const cart = useCart();
+  const navigate = useNavigate();
   const addItem = () => {
     if (available < qty) return;
-    window.location.assign('/emergency/?add=' + encodeURIComponent(v.id) + '&qty=' + qty);
+    cart.add(v.id, qty);
+    toast.success('اتضاف للسلة', {duration: 1000});
   };
-  const buyNow = addItem;
+  const buyNow = () => {
+    if (available < qty) return;
+    void navigate({to: '/cart',search:{checkout:true,buyNow:v.id,qty}});
+  };
 
   return <>
     <div className="wrap page product-page">
