@@ -287,6 +287,10 @@ export function Header() {
             </nav>
         </header>
         <ModeNotice/>
+        <div role="status" className="mode-notice warning" style={{padding:'9px 16px',textAlign:'center',lineHeight:1.75}}>
+          هومي شغال مؤقتًا بنظام طلبات واتساب لحد ما Supabase يرجع. الأسعار والمخزون للتأكيد.
+          {' '}<a href="/emergency/" style={{textDecoration:'underline',fontWeight:700}}>اطلب من هنا</a>
+        </div>
         {preview && <div className="mode-notice">معاينة مسودة للإدارة فقط — المحتوى ده لسه مش منشور للعملاء.</div>}
         {error && <div className="mode-notice warning">{error}</div>}
     </>;
