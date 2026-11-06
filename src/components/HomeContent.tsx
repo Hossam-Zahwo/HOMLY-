@@ -146,7 +146,7 @@ export function HomeContent() {
   const usedIds = new Set(firstProducts.map(({v})=>v.id));
   const remaining = homeItems.filter(({v})=>!usedIds.has(v.id));
   if (siteLoading) return <div className="wrap homey-first-skeleton" role="status" aria-label="جارٍ تجهيز منتجات هومي"><div className="homey-hero-placeholder skeleton"/><div className="product-grid"><div className="skeleton"/><div className="skeleton"/><div className="skeleton"/><div className="skeleton"/></div></div>;
-  if (!visibleBlocks.length) return <div className="wrap page home-unavailable"><h1>أهلًا بيك في هومي</h1><p>{siteError||'تقدر تتصفح كل منتجاتنا هنا.'}</p><Link to="/products" className="btn">تصفح المنتجات</Link></div>;
+  if (!visibleBlocks.length) return <div className="wrap page home-unavailable"><h1>أهلًا بيك في هومي</h1><p>{siteError||'تقدر تتصفح كل منتجاتنا هنا.'}</p><a href="/emergency/" className="btn">تصفح المنتجات والطلب عبر واتساب مؤقتًا</a></div>;
   return <div className="homey-redesigned-home">
     {error && <div className="wrap"><Notice>{error}<button className="text-button" onClick={reload}>إعادة المحاولة</button></Notice></div>}
     {hero && <Hero block={hero}/>}
