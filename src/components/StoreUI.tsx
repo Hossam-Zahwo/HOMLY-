@@ -318,11 +318,9 @@ export function ProductCard({ p, v, priority = false }: {
     useEffect(() => () => { if (buyNowTimer.current !== null) clearTimeout(buyNowTimer.current); }, []);
     const buyNow = () => {
         if (buying || stock < 1) return;
-        setBuying(true);
-        // Short visual confirmation, then land directly in the checkout wizard.
-        buyNowTimer.current = setTimeout(() => {
-            void navigate({ to: '/cart', search: { checkout: true, buyNow: v.id, qty: 1 } });
-        }, 135);
+        // During Supabase 402, retain original responsive card design, but send
+        // orders via the independent WhatsApp checkout with this exact variant.
+        window.location.assign('/emergency/?add=' + encodeURIComponent(v.id));
     };
     const stock = v.stock_on_hand - v.stock_reserved;
     const title = latinDigits(v.title_override || p.title_ar);
@@ -351,8 +349,7 @@ export function ProductCard({ p, v, priority = false }: {
             </div>
             <div className="homey-card-actions">
                 <button type="button" disabled={stock < 1 || buying} className="btn compact homey-card-add" onClick={() => {
-                    add(v.id);
-                    toast.success('اتضاف للسلة ✓', { duration: 850, className: 'homey-cart-toast' });
+                    window.location.assign('/emergency/?add=' + encodeURIComponent(v.id));
                 }}><ShoppingCart size={15}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button>
                 <button type="button" disabled={stock < 1 || buying} className={'btn compact homey-btn-buy-now' + (buying ? ' homey-buy-now-active' : '')} onClick={buyNow} aria-label={`اطلب الآن: ${title}`}><Zap size={15} aria-hidden="true"/>{buying ? 'جاري الطلب...' : 'اطلب الآن'}</button>
             </div>
