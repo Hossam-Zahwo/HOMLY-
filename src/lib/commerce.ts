@@ -1,5 +1,30 @@
 import { compressStoreImage, type ImagePurpose } from './image-optimization';
 import { supabase, requireConnection } from './supabase';
+// Probe ONE known public image without blocking catalog rendering. During Supabase
+// 402 we show lightweight placeholders. Once the gateway responds 200 again,
+// reload the same saved product paths to restore actual media automatically.
+let legacyImagesAreAvailable = false;
+let lastLegacyImageProbe = 0;
+let mediaProbeActive = false;
+function probeLegacyImageAvailability() {
+ if (typeof window === 'undefined') return;
+ if (legacyImagesAreAvailable || mediaProbeActive || import.meta.env.VITE_HOMEY_IMAGES_ON_NEW_PROJECT === 'true') return;
+ const now = Date.now();
+ if (now - lastLegacyImageProbe < 300000) return;
+ lastLegacyImageProbe = now;
+ mediaProbeActive = true;
+ const controller = new AbortController();
+ const timer = window.setTimeout(() => controller.abort(), 1400);
+ const test = 'https://hlcatmtjrmqaakwvfkwf.supabase.co/storage/v1/object/public/homly-products/010ba87b-735b-498b-8d17-754c648f180e.jpeg';
+ void fetch(test, {method: 'HEAD', mode: 'cors', cache: 'no-store', signal: controller.signal})
+   .then(result => {
+     if (!result.ok) return;
+     legacyImagesAreAvailable = true;
+     window.dispatchEvent(new Event('homy-catalog-changed'));
+   })
+   .catch(() => {})
+   .finally(() => { window.clearTimeout(timer); mediaProbeActive = false; });
+}
 export type Category = {
     id: string;
     name_ar: string;
@@ -149,6 +174,7 @@ async function readCatalogTable(table:string, keys:string[], admin:boolean){
 }
 export async function catalog(admin=false):Promise<Catalog>{
  if (!admin) {
+   probeLegacyImageAvailability();
    // The original Supabase project is 402-restricted. Public storefront only:
    // read a safe snapshot of published catalog rows, never orders or private data.
    const response = await fetch('/emergency/catalog-full.json', {cache: 'force-cache'});
@@ -174,7 +200,7 @@ export function assetUrl(path: string | null) {
  const oldPrefix = 'https://hlcatmtjrmqaakwvfkwf.supabase.co/storage/v1/object/public/homly-products/';
  const newPrefix = 'https://tzbckxumztwwyytryarw.supabase.co/storage/v1/object/public/homly-products/';
  const onNew = import.meta.env.VITE_HOMEY_IMAGES_ON_NEW_PROJECT === 'true';
- const oldReady = import.meta.env.VITE_HOMEY_STORAGE_ORIGINAL_READY === 'true';
+ const oldReady = import.meta.env.VITE_HOMEY_STORAGE_ORIGINAL_READY === 'true' || legacyImagesAreAvailable;
  if (source.startsWith(oldPrefix)) {
    if (onNew) return newPrefix + source.slice(oldPrefix.length);
    return oldReady ? source : '/placeholder.svg';
