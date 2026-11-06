@@ -5,7 +5,21 @@ import { getCurrentAdmin } from './admin';
 export async function loadSite(draft = false): Promise<{
     config: SiteConfig;
     version: number;
-}> { requireConnection(); const { data, error } = await supabase.from(draft ? 'homly_site_drafts' : 'homly_site_content').select('config,version').eq('id', 'main').maybeSingle(); if (error)
+}> {
+  // Original HOMEY November 5 layout/config, served statically while Supabase is 402-restricted.
+  // Admin writes and drafts still use the original authenticated backend.
+  if (!draft) {
+    const response = await fetch('/emergency/site-config.json', {cache:'force-cache'});
+    if (!response.ok) throw new Error('تعذر تحميل إعدادات واجهة هومي المؤقتة');
+    const saved = await response.json() as {config: SiteConfig; version: number};
+    if (!saved?.config || !Array.isArray(saved.config.blocks)) throw new Error('ملف تصميم هومي غير صالح');
+    return {config: normalizeSite({
+      ...saved.config,
+      brand: {...saved.config.brand, logo:'/homey-wordmark.svg'},
+      header: {...saved.config.header, showOrders:false}
+    }), version:saved.version||0};
+  }
+  requireConnection(); const { data, error } = await supabase.from(draft ? 'homly_site_drafts' : 'homly_site_content').select('config,version').eq('id', 'main').maybeSingle(); if (error)
     throw error; if(draft&&!data){const published=await loadSite(false);return {config:published.config,version:0}} return { config: normalizeSite(data?.config), version: data?.version || 0 }; }
 export async function saveSite(config: SiteConfig, publish: boolean, version: number) { requireConnection(); const { data, error } = await supabase.rpc('homly_save_site_content', { p_config: config, p_publish: publish, p_expected_version: version }); if (error)
     throw error; window.dispatchEvent(new Event('homy-content-changed')); if(data===null||!Number.isInteger(Number(data))||Number(data)<=version)throw new Error('لم يصل تأكيد حفظ نسخة المحتوى؛ أعد تحميل البيانات قبل المحاولة');return Number(data); }
