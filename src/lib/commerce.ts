@@ -189,7 +189,7 @@ export async function catalog(admin=false):Promise<Catalog>{
    for (const product of workingImages?.products || []) {
      for (const variant of product.variants || []) {
        const fallback = (variant as Variant & {legacy_image_url?: string}).legacy_image_url;
-       if (fallback && /^https:\\/\\//.test(fallback)) restoredImageByVariant.set(product.id + ':' + variant.id, fallback);
+       if (fallback && fallback.startsWith('https://')) restoredImageByVariant.set(product.id + ':' + variant.id, fallback);
      }
    }
    const categoryImageFallback: Record<string, string> = {lighting:'/images/jars.png', bathroom:'/images/towels.png'};
