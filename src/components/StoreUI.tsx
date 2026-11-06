@@ -274,7 +274,7 @@ export function Header() {
                 <div className="header-actions">
                     {config.header.showOrders && <Link to="/orders" className="account-link">طلباتي</Link>}
                     <Link to="/favorites" className="homey-header-favorites" aria-label={`المفضلة، ${favoritesCount} منتجات`}><Heart size={20} aria-hidden="true"/><span className="homey-favorite-label">المفضلة</span>{favoritesCount > 0 && <small className="homey-favorite-count">{favoritesCount}</small>}</Link>
-                    <Link to="/cart" search={{ checkout: false }} className="cart-link homey-cart-action" aria-label={`سلة التسوق، ${count} ${count === 1 ? 'منتج' : 'منتجات'}`}>
+                    <Link to="/cart" search={{ checkout: false, buyNow: '', qty: 1 }} className="cart-link homey-cart-action" aria-label={`سلة التسوق، ${count} ${count === 1 ? 'منتج' : 'منتجات'}`}>
                         <ShoppingCart size={24}/>
                         {count > 0 && <span key={`cart-counter-${cartPulse}`} className={'homey-cart-count' + (cartPulse ? ' homey-cart-count-bump' : '')} aria-hidden="true">{count > 99 ? '99+' : count}</span>}
                         {cartPulse > 0 && <span key={`cart-feedback-${cartPulse}`} className="homey-cart-added-pop" role="status">+{addedQuantity} اتضاف للسلة ✓</span>}
