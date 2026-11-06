@@ -26,7 +26,11 @@ export function SiteProvider({children}: {children: ReactNode}) {
       try {
         const wantsPreview = new URLSearchParams(window.location.search).get('content_preview') === '1';
         const canPreview = wantsPreview && Boolean(await getCurrentAdmin());
-        const result = await loadSite(canPreview);
+        const result = canPreview ? await loadSite(true) : await fetch('/emergency/site.json', {cache: 'force-cache'}).then(async response => {
+          if (!response.ok) throw new Error('تعذر تحميل إعدادات الواجهة المؤقتة');
+          const saved = await response.json() as {config: SiteConfig; version: number};
+          return {config: normalizeSite(saved.config), version: saved.version};
+        });
         if (!active || requestId !== currentRequest) return;
         setConfig(result.config);
         setPreview(canPreview);
