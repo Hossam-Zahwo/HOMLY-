@@ -185,7 +185,14 @@ export async function catalog(admin=false):Promise<Catalog>{
      image_path: assetUrl(c.image_path).startsWith('/placeholder') ? categoryImageFallback[c.slug] || '/images/living.png' : assetUrl(c.image_path)
    })), products: snapshot.products.map(p => ({...p,
      images: p.images.map(src => assetUrl(src)),
-     variants: p.variants.map(v => ({...v,images: v.images.map(src => assetUrl(src))}))
+     variants: p.variants.map(v => {
+       const fromMainBucket = v.images.map(src => assetUrl(src)).filter(src => src && src !== '/placeholder.svg');
+       const fromOldInventory = (v as Variant & {legacy_image_url?:string}).legacy_image_url;
+       // Only show fallback photos for matching SKUs that were manually reviewed.
+       // The current store's images take precedence as soon as their origin is available.
+       const imageUrls = fromMainBucket.length ? fromMainBucket : fromOldInventory ? [fromOldInventory] : [];
+       return {...v,images:imageUrls};
+     })
    }))};
  }
  requireConnection();const [products,categories,variants,images,links,options,values,choices]=await Promise.all([
