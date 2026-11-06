@@ -57,7 +57,7 @@ function ProductPage() {
   if (!p || !v) return <div className="wrap empty"><h1>المنتج غير متاح</h1><Link to="/products" className="btn">عودة للمنتجات</Link></div>;
 
   const title = latinDigits(v.title_override || p.title_ar);
-  const gallery = [...new Set([...v.images, ...p.images].filter(Boolean))];
+  const gallery = [...new Set([...v.images, ...p.images].filter(src => src && src !== '/placeholder.svg'))];
   const currentPhoto = Math.min(photo, Math.max(0, gallery.length - 1));
   const available = v.stock_on_hand - v.stock_reserved;
   const related = cards(products.filter((product) => product.id !== p.id && product.categories.some((id) => p.categories.includes(id)))).slice(0, 4);
