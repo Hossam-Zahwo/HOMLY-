@@ -1,4 +1,4 @@
-import {createFileRoute,Link,useNavigate} from '@tanstack/react-router';
+import {createFileRoute,Link} from '@tanstack/react-router';
 import {useEffect,useState} from 'react';
 import {ShoppingCart,Check,ChevronLeft,ChevronRight,Zap,Heart} from 'lucide-react';
 import {toast} from 'sonner';
