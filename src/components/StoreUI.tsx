@@ -310,12 +310,8 @@ export function ProductCard({ p, v, priority = false }: {
     priority?: boolean;
 }) {
     const copy = useCopy();
-    const { add } = useCart();
     const {has,toggle} = useFavorites();
-    const navigate = useNavigate();
-    const [buying, setBuying] = useState(false);
-    const buyNowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    useEffect(() => () => { if (buyNowTimer.current !== null) clearTimeout(buyNowTimer.current); }, []);
+    const buying = false;
     const buyNow = () => {
         if (buying || stock < 1) return;
         // During Supabase 402, retain original responsive card design, but send
