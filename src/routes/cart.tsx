@@ -246,13 +246,6 @@ function Cart() {
 
     submitting.current = true;
     setBusy(true);
-    let popup: Window | null = null;
-    try {
-      if (config.whatsapp.enabled && whatsappHref(config.whatsapp.number, '')) {
-        popup = window.open('', '_blank');
-        if (popup) { popup.opener = null; popup.document.title = 'جاري تسجيل الطلب'; popup.document.body.textContent = 'جارٍ حفظ طلبك. سيتم فتح واتساب بعد نجاح التسجيل…'; }
-      }
-    } catch {}
     try {
       // Re-check the server quote just before creating the order. The promo may have expired
       // while the customer was filling the form; never silently increase checkout total.
@@ -288,12 +281,9 @@ function Cart() {
       } catch {} finally { clearTimeout(settingsTimer); }
       const link = orderWhatsAppUrl(settings, order);
       setWhatsappUrl(link);
-      if (link) {
-        if (popup && !popup.closed) { try { popup.location.replace(link); } catch { popup.close(); } }
-        else { try { window.open(link, '_blank', 'noopener,noreferrer'); } catch {} }
-      } else if (popup && !popup.closed) popup.close();
+      // The database order is already completed; WhatsApp is optional support,
+      // never the checkout processor or a forced extra step.
     } catch (err) {
-      if (popup && !popup.closed) popup.close();
       setFailure(explain(err));
     } finally { submitting.current = false; setBusy(false); }
   };
@@ -309,8 +299,8 @@ function Cart() {
       <div className="summary-line grand"><span>الإجمالي المعتمد</span><b>{money(result.total_minor)}</b></div>
     </div>
     <p>احتفظ برقم طلبك. الدفع عند الاستلام، ولم يتم خصم أي مبلغ إلكترونيًا.</p>
-    {whatsappUrl ? <a className="btn whatsapp-order" target="_blank" rel="noopener noreferrer" href={whatsappUrl}>{copy('whatsappConfirm')}</a> : <Notice kind="info">طلبك اتسجل. واتساب غير مفعّل أو الرقم غير صحيح في إعدادات المتجر.</Notice>}
-    <p className="muted small">طلبك اتسجل بالفعل. لو واتساب فتح، اضغط إرسال عشان تبعت تفاصيله. لو ما فتحش استخدم الزر اللي فوق.</p>
+    {whatsappUrl && <a className="btn whatsapp-order" target="_blank" rel="noopener noreferrer" href={whatsappUrl}>تأكيد إضافي على واتساب (اختياري)</a>}
+    <p className="muted small">طلبك محفوظ في نظام هومي بالفعل، ومش محتاج تفتح واتساب لإتمامه.</p>
     <Link to="/products" className="btn outline">متابعة التسوق</Link>
   </div>;
 
