@@ -1,4 +1,36 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "tanstack-start"
+  "framework": "tanstack-start",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/emergency/",
+      "permanent": false
+    },
+    {
+      "source": "/products",
+      "destination": "/emergency/",
+      "permanent": false
+    },
+    {
+      "source": "/products/:path*",
+      "destination": "/emergency/",
+      "permanent": false
+    },
+    {
+      "source": "/cart",
+      "destination": "/emergency/",
+      "permanent": false
+    },
+    {
+      "source": "/checkout",
+      "destination": "/emergency/",
+      "permanent": false
+    },
+    {
+      "source": "/checkout/:path*",
+      "destination": "/emergency/",
+      "permanent": false
+    }
+  ]
 }
