@@ -173,7 +173,17 @@ async function readCatalogTable(table:string, keys:string[], admin:boolean){
     return data;
 }
 export async function catalog(admin=false):Promise<Catalog>{
- if (!admin) {
+ if (!admin && import.meta.env.VITE_HOMEY_LIVE_CATALOG !== 'true') return emergencyCatalog();
+ try {
+   const result = await databaseCatalog(admin);
+   return admin ? result : await recoverLiveCatalogMedia(result);
+ } catch (error) {
+   if (admin) throw error;
+   // Keep the storefront visible during a temporary API outage.
+   return emergencyCatalog();
+ }
+}
+async function emergencyCatalog():Promise<Catalog>{
    probeLegacyImageAvailability();
    // The original Supabase project is 402-restricted. Public storefront only:
    // read a safe snapshot of published catalog rows, never orders or private data.
@@ -206,12 +216,40 @@ export async function catalog(admin=false):Promise<Catalog>{
        return {...v,images:imageUrls};
      })
    }))};
- }
+}
+async function recoverLiveCatalogMedia(data:Catalog):Promise<Catalog>{
+  const working = await fetch('/emergency/catalog-working-images.json', {cache:'force-cache'})
+    .then(r=>r.ok ? r.json() as Promise<Catalog> : null).catch(()=>null);
+  const reviewed = new Map<string,string>();
+  for (const p of working?.products || []) for (const v of p.variants || []) {
+    const photo = (v as Variant & {legacy_image_url?:string}).legacy_image_url;
+    if(photo && photo.startsWith('https://')) reviewed.set(p.id + ':' + v.id, photo);
+  }
+  const categoryDefaults:Record<string,string>={lighting:'/images/jars.png',bathroom:'/images/towels.png'};
+  return {
+    categories:data.categories.map(c=>({...c,image_path:c.image_path==='/placeholder.svg' ? categoryDefaults[c.slug]||'/images/living.png' : c.image_path})),
+    products:data.products.map(p=>({...p,
+      images:p.images.filter(src=>src && src !== '/placeholder.svg'),
+      variants:p.variants.map(v=>{
+        const live = v.images.filter(src=>src && src !== '/placeholder.svg');
+        const reviewedFallback = reviewed.get(p.id + ':' + v.id);
+        return {...v,images:live.length?live:reviewedFallback?[reviewedFallback]:[]};
+      })
+    }))
+  };
+}
+function adminAssetUrl(path:string|null):string {
+  if (!path) return '/placeholder.svg';
+  const source=String(path);
+  if(source.startsWith('https://')||source.startsWith('http://')||source.startsWith('/')) return source;
+  return 'https://hlcatmtjrmqaakwvfkwf.supabase.co/storage/v1/object/public/homly-products/' + source.replace(/^[/]+/,'');
+}
+async function databaseCatalog(admin:boolean):Promise<Catalog>{
  requireConnection();const [products,categories,variants,images,links,options,values,choices]=await Promise.all([
  readCatalogTable('homly_products',['created_at','id'],admin),readCatalogTable('homly_categories',['sort_order','id'],admin),readCatalogTable('homly_product_variants',['sort_order','id'],admin),readCatalogTable('homly_product_images',['sort_order','id'],admin),readCatalogTable('homly_product_categories',['product_id','category_id'],admin),readCatalogTable('homly_product_options',['id'],admin),readCatalogTable('homly_option_values',['id'],admin),readCatalogTable('homly_variant_option_values',['variant_id','option_id'],admin)]);
  const group=(rows:any[],key:string)=>{const map=new Map<string,any[]>();for(const row of rows){const list=map.get(row[key]);if(list)list.push(row);else map.set(row[key],[row])}return map};
  const imagesByProduct=group(images.filter(i=>!i.variant_id),'product_id'),imagesByVariant=group(images.filter(i=>i.variant_id),'variant_id'),categoriesByProduct=group(links,'product_id'),variantsByProduct=group(variants,'product_id'),choicesByVariant=group(choices,'variant_id'),optionById=new Map(options.map(o=>[o.id,o])),valueById=new Map(values.map(v=>[v.id,v]));
- return {categories:categories.filter(c=>!c.deleted_at&&(admin||c.is_active)).map(c=>({...c,image_path:assetUrl(c.image_path)})),products:products.filter(p=>!p.deleted_at&&(admin||p.status==='published')).map(p=>({...p,categories:(categoriesByProduct.get(p.id)||[]).map(c=>c.category_id),images:(imagesByProduct.get(p.id)||[]).map(i=>assetUrl(i.storage_path)),variants:(variantsByProduct.get(p.id)||[]).filter(v=>admin||v.status==='published').map(v=>({...v,images:(imagesByVariant.get(v.id)||[]).map(i=>assetUrl(i.storage_path)),options:Object.fromEntries((choicesByVariant.get(v.id)||[]).map(c=>[optionById.get(c.option_id)?.name_ar||'الاختيار',valueById.get(c.value_id)?.label_ar||'']))}))}))};
+ return {categories:categories.filter(c=>!c.deleted_at&&(admin||c.is_active)).map(c=>({...c,image_path:(admin ? adminAssetUrl(c.image_path) : assetUrl(c.image_path))})),products:products.filter(p=>!p.deleted_at&&(admin||p.status==='published')).map(p=>({...p,categories:(categoriesByProduct.get(p.id)||[]).map(c=>c.category_id),images:(imagesByProduct.get(p.id)||[]).map(i=>admin ? adminAssetUrl(i.storage_path) : assetUrl(i.storage_path)),variants:(variantsByProduct.get(p.id)||[]).filter(v=>admin||v.status==='published').map(v=>({...v,images:(imagesByVariant.get(v.id)||[]).map(i=>admin ? adminAssetUrl(i.storage_path) : assetUrl(i.storage_path)),options:Object.fromEntries((choicesByVariant.get(v.id)||[]).map(c=>[optionById.get(c.option_id)?.name_ar||'الاختيار',valueById.get(c.value_id)?.label_ar||'']))}))}))};
 }
 export function assetUrl(path: string | null) {
  if (!path) return '/placeholder.svg';
@@ -245,6 +283,9 @@ export function imageFor(p: Product, v?: Variant) { return v?.images[0] || p.ima
 export async function shippingZones(includeInactive = false): Promise<Zone[]> { requireConnection(); let q = supabase.from('homly_shipping_zones').select('id,governorate,areas,fee_minor,is_active'); if (!includeInactive)
     q = q.eq('is_active', true); const { data, error } = await q; check(error); return data || []; }
 export function storedImagePath(url:string):string {
+ // New media URL stays absolute so old and newly uploaded assets never collide.
+ const newOrigin='https://tzbckxumztwwyytryarw.supabase.co/storage/v1/object/public/homly-products/';
+ if(url.startsWith(newOrigin))return url;
  const marker='/storage/v1/object/public/homly-products/';
  if(url.includes(marker))return decodeURIComponent(url.split(marker)[1].split('?')[0]);
  return url;
@@ -266,7 +307,7 @@ export async function uploadImage(file: File, purpose: ImagePurpose = 'product')
         cacheControl: '31536000',
     });
     check(error);
-    return path;
+    return supabase.storage.from('homly-products').getPublicUrl(path).data.publicUrl;
 }
 
 /** Prepare a lighter copy of an already-uploaded CMS/category image. Callers
@@ -288,7 +329,7 @@ export async function optimizeStoredAsset(image: string, purpose: ImagePurpose =
         upsert: false, contentType: 'image/webp', cacheControl: '31536000',
     });
     check(error);
-    return {path, optimized: true, savedBytes: original.size - compressed.size};
+    return {path: supabase.storage.from('homly-products').getPublicUrl(path).data.publicUrl, optimized: true, savedBytes: original.size - compressed.size};
 }
 
 /**
@@ -318,7 +359,7 @@ export async function optimizeExistingProductImages(product: Product) {
             upsert: false, contentType: 'image/webp', cacheControl: '31536000',
         });
         check(error);
-        replacements.set(image, freshPath);
+        replacements.set(image, supabase.storage.from('homly-products').getPublicUrl(freshPath).data.publicUrl);
         optimizedCount++;
         bytesBefore += original.size;
         bytesAfter += compressed.size;
