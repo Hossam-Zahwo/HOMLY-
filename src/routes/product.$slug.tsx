@@ -1,4 +1,4 @@
-import {createFileRoute,Link,useNavigate} from '@tanstack/react-router';
+import {createFileRoute,Link} from '@tanstack/react-router';
 import {useEffect,useState} from 'react';
 import {ShoppingCart,Check,ChevronLeft,ChevronRight,Zap,Heart} from 'lucide-react';
 import {toast} from 'sonner';
@@ -6,7 +6,6 @@ import {useCatalog,Picture,Notice,Loading,ProductCard,Section,Quantity,TrustStri
 import {imageFor,money,cards} from '@/lib/commerce';
 import {PublicReviews} from '@/components/Reviews';
 import {useCopy} from '@/lib/site';
-import {useCart} from '@/lib/cart';
 import {useFavorites} from '@/lib/favorites';
 import {latinDigits} from '@/lib/digits';
 import {fetchProductSeo,productJsonLd,productSeoTitle,productSeoDescription,productUrl,safeStructuredData} from '@/lib/seo';
@@ -42,9 +41,7 @@ function ProductPage() {
   const { products, loading, error } = useCatalog();
   const p = products.find((product) => product.variants.some((variant) => variant.slug === slug));
   const v = p?.variants.find((variant) => variant.slug === slug);
-  const { add } = useCart();
   const {has,toggle} = useFavorites();
-  const navigate = useNavigate();
   const [photo, setPhoto] = useState(0);
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState('description');
@@ -66,13 +63,9 @@ function ProductPage() {
   const related = cards(products.filter((product) => product.id !== p.id && product.categories.some((id) => p.categories.includes(id)))).slice(0, 4);
   const addItem = () => {
     if (available < qty) return;
-    add(v.id, qty);
-    toast.success('اتضاف للسلة ✓', { duration: 850, className: 'homey-cart-toast' });
+    window.location.assign('/emergency/?add=' + encodeURIComponent(v.id) + '&qty=' + qty);
   };
-  const buyNow = () => {
-    if (available < qty) return;
-    void navigate({ to: '/cart', search: { checkout: true, buyNow: v.id, qty } });
-  };
+  const buyNow = addItem;
 
   return <>
     <div className="wrap page product-page">

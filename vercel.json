@@ -3,21 +3,6 @@
   "framework": "tanstack-start",
   "redirects": [
     {
-      "source": "/",
-      "destination": "/emergency/",
-      "permanent": false
-    },
-    {
-      "source": "/products",
-      "destination": "/emergency/",
-      "permanent": false
-    },
-    {
-      "source": "/products/:path*",
-      "destination": "/emergency/",
-      "permanent": false
-    },
-    {
       "source": "/cart",
       "destination": "/emergency/",
       "permanent": false

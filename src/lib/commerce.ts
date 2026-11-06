@@ -148,15 +148,41 @@ async function readCatalogTable(table:string, keys:string[], admin:boolean){
     return data;
 }
 export async function catalog(admin=false):Promise<Catalog>{
+ if (!admin) {
+   // The original Supabase project is 402-restricted. Public storefront only:
+   // read a safe snapshot of published catalog rows, never orders or private data.
+   const response = await fetch('/emergency/catalog-full.json', {cache: 'force-cache'});
+   if (!response.ok) throw new Error('تعذر تحميل نسخة المنتجات المؤقتة');
+   const snapshot = await response.json() as Catalog;
+   const categoryImageFallback: Record<string, string> = {lighting:'/images/jars.png', bathroom:'/images/towels.png'};
+   return {categories: snapshot.categories.map(c => ({...c,
+     image_path: assetUrl(c.image_path).startsWith('/placeholder') ? categoryImageFallback[c.slug] || '/images/living.png' : assetUrl(c.image_path)
+   })), products: snapshot.products.map(p => ({...p,
+     images: p.images.map(src => assetUrl(src)),
+     variants: p.variants.map(v => ({...v,images: v.images.map(src => assetUrl(src))}))
+   }))};
+ }
  requireConnection();const [products,categories,variants,images,links,options,values,choices]=await Promise.all([
  readCatalogTable('homly_products',['created_at','id'],admin),readCatalogTable('homly_categories',['sort_order','id'],admin),readCatalogTable('homly_product_variants',['sort_order','id'],admin),readCatalogTable('homly_product_images',['sort_order','id'],admin),readCatalogTable('homly_product_categories',['product_id','category_id'],admin),readCatalogTable('homly_product_options',['id'],admin),readCatalogTable('homly_option_values',['id'],admin),readCatalogTable('homly_variant_option_values',['variant_id','option_id'],admin)]);
  const group=(rows:any[],key:string)=>{const map=new Map<string,any[]>();for(const row of rows){const list=map.get(row[key]);if(list)list.push(row);else map.set(row[key],[row])}return map};
  const imagesByProduct=group(images.filter(i=>!i.variant_id),'product_id'),imagesByVariant=group(images.filter(i=>i.variant_id),'variant_id'),categoriesByProduct=group(links,'product_id'),variantsByProduct=group(variants,'product_id'),choicesByVariant=group(choices,'variant_id'),optionById=new Map(options.map(o=>[o.id,o])),valueById=new Map(values.map(v=>[v.id,v]));
  return {categories:categories.filter(c=>!c.deleted_at&&(admin||c.is_active)).map(c=>({...c,image_path:assetUrl(c.image_path)})),products:products.filter(p=>!p.deleted_at&&(admin||p.status==='published')).map(p=>({...p,categories:(categoriesByProduct.get(p.id)||[]).map(c=>c.category_id),images:(imagesByProduct.get(p.id)||[]).map(i=>assetUrl(i.storage_path)),variants:(variantsByProduct.get(p.id)||[]).filter(v=>admin||v.status==='published').map(v=>({...v,images:(imagesByVariant.get(v.id)||[]).map(i=>assetUrl(i.storage_path)),options:Object.fromEntries((choicesByVariant.get(v.id)||[]).map(c=>[optionById.get(c.option_id)?.name_ar||'الاختيار',valueById.get(c.value_id)?.label_ar||'']))}))}))};
 }
-export function assetUrl(path: string | null) { if (!path)
-    return '/placeholder.svg'; if (path.startsWith('/') || /^https?:\/\//.test(path))
-    return path; return supabase.storage.from('homly-products').getPublicUrl(path).data.publicUrl; }
+export function assetUrl(path: string | null) {
+ if (!path) return '/placeholder.svg';
+ const source = String(path);
+ const oldPrefix = 'https://hlcatmtjrmqaakwvfkwf.supabase.co/storage/v1/object/public/homly-products/';
+ const newPrefix = 'https://tzbckxumztwwyytryarw.supabase.co/storage/v1/object/public/homly-products/';
+ const onNew = import.meta.env.VITE_HOMEY_IMAGES_ON_NEW_PROJECT === 'true';
+ const oldReady = import.meta.env.VITE_HOMEY_STORAGE_ORIGINAL_READY === 'true';
+ if (source.startsWith(oldPrefix)) {
+   if (onNew) return newPrefix + source.slice(oldPrefix.length);
+   return oldReady ? source : '/placeholder.svg';
+ }
+ if (source.startsWith('https://') || source.startsWith('http://') || source.startsWith('/')) return source;
+ if (onNew) return newPrefix + source.replace(/^[/]+/, '');
+ return oldReady ? supabase.storage.from('homly-products').getPublicUrl(source).data.publicUrl : '/placeholder.svg';
+}
 export const availableStock = (v: Variant) => Math.max(0, Number(v.stock_on_hand || 0) - Number(v.stock_reserved || 0));
 export function cards(products: Product[]) {
  const rows = products.flatMap(p => {
