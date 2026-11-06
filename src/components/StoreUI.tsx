@@ -287,10 +287,6 @@ export function Header() {
             </nav>
         </header>
         <ModeNotice/>
-        <div role="status" className="mode-notice warning" style={{padding:'9px 16px',textAlign:'center',lineHeight:1.75}}>
-          هومي شغال مؤقتًا بنظام طلبات واتساب لحد ما Supabase يرجع. الأسعار والمخزون للتأكيد.
-          {' '}<a href="/emergency/" style={{textDecoration:'underline',fontWeight:700}}>اطلب من هنا</a>
-        </div>
         {preview && <div className="mode-notice">معاينة مسودة للإدارة فقط — المحتوى ده لسه مش منشور للعملاء.</div>}
         {error && <div className="mode-notice warning">{error}</div>}
     </>;
@@ -315,12 +311,12 @@ export function ProductCard({ p, v, priority = false }: {
 }) {
     const copy = useCopy();
     const {has,toggle} = useFavorites();
+    const cart = useCart();
+    const navigate = useNavigate();
     const buying = false;
     const buyNow = () => {
         if (buying || stock < 1) return;
-        // During Supabase 402, retain original responsive card design, but send
-        // orders via the independent WhatsApp checkout with this exact variant.
-        window.location.assign('/emergency/?add=' + encodeURIComponent(v.id));
+        void navigate({ to: '/cart', search: {checkout: true, buyNow: v.id, qty: 1} });
     };
     const stock = v.stock_on_hand - v.stock_reserved;
     const title = latinDigits(v.title_override || p.title_ar);
@@ -349,7 +345,8 @@ export function ProductCard({ p, v, priority = false }: {
             </div>
             <div className="homey-card-actions">
                 <button type="button" disabled={stock < 1 || buying} className="btn compact homey-card-add" onClick={() => {
-                    window.location.assign('/emergency/?add=' + encodeURIComponent(v.id));
+                    cart.add(v.id);
+                    toast.success('اتضاف للسلة', {duration: 1000});
                 }}><ShoppingCart size={15}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button>
                 <button type="button" disabled={stock < 1 || buying} className={'btn compact homey-btn-buy-now' + (buying ? ' homey-buy-now-active' : '')} onClick={buyNow} aria-label={`اطلب الآن: ${title}`}><Zap size={15} aria-hidden="true"/>{buying ? 'جاري الطلب...' : 'اطلب الآن'}</button>
             </div>
