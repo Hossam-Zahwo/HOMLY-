@@ -74,14 +74,25 @@ export async function compressStoreImage(blob: Blob, purpose: ImagePurpose = 'pr
 export const allowStorageTransforms = import.meta.env.VITE_HOMEY_IMAGE_TRANSFORMS === 'true';
 const PUBLIC_MARKER = '/storage/v1/object/public/homly-products/';
 
+const CLOUDINARY_UPLOAD = /^https:\/\/res\.cloudinary\.com\/efpylmbh\/image\/upload\//;
+const isCloudinaryImage = (url: string) => CLOUDINARY_UPLOAD.test(url);
+
+/**
+ * Cloudinary generates device-sized, automatically compressed images on demand.
+ * Keep the immutable uploaded original untouched and fall back to it on errors.
+ */
 export function supabaseResponsiveImage(url: string, width: number, quality = 78): string {
+  if (isCloudinaryImage(url)) {
+    const safeWidth = Math.max(96, Math.min(1920, Math.round(width)));
+    const safeQuality = Math.max(60, Math.min(90, Math.round(quality)));
+    return url.replace(CLOUDINARY_UPLOAD, 'https://res.cloudinary.com/efpylmbh/image/upload/f_auto,q_' + safeQuality + ',w_' + safeWidth + ',c_limit/');
+  }
   if (!allowStorageTransforms || !url.includes(PUBLIC_MARKER)) return url;
   const [pathname] = url.split('?');
-  // Never append untrusted query parameters; only use public images in our bucket.
   return pathname.replace(PUBLIC_MARKER, '/storage/v1/render/image/public/homly-products/')
     + '?width=' + width + '&quality=' + quality + '&resize=contain';
 }
 
 export function hasResponsiveTransform(url: string): boolean {
-  return allowStorageTransforms && url.includes(PUBLIC_MARKER);
+  return isCloudinaryImage(url) || (allowStorageTransforms && url.includes(PUBLIC_MARKER));
 }
