@@ -35,7 +35,7 @@ export async function prepareHomeyImage(file: File): Promise<File> {
         if (blob.size <= TARGET_BYTES && blob.size <= file.size * 0.9) break;
       }
       if (!smallest || smallest.size >= file.size * 0.9) return file;
-      return new File([smallest], file.name.replace(/\\.[^.]+$/, '') + '.webp', { type: 'image/webp' });
+      return new File([smallest], file.name.replace(/\.[^.]+$/, '') + '.webp', { type: 'image/webp' });
     } finally {
       canvas.width = 0;
       canvas.height = 0;
