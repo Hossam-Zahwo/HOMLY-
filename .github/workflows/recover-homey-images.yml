@@ -1,0 +1,44 @@
+name: Recover HOMEY images from backup Storage
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run checks mapping; apply uploads recovered images to Cloudinary"
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - apply
+        default: dry-run
+permissions:
+  contents: read
+concurrency:
+  group: homey-recovered-images
+  cancel-in-progress: false
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      RECOVERED_IMAGES_APPLY: ${{ inputs.mode == 'apply' && 'YES' || 'NO' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/cloudinary-media-homeyegypt
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Upload recovered images and verify
+        run: node scripts/upload-recovered-images-to-cloudinary.mjs
+      - name: Save recovery report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: homey-recovered-${{ inputs.mode }}-${{ github.run_id }}
+          path: migration-reports/recovered-images.json
+          retention-days: 30
+          if-no-files-found: warn
