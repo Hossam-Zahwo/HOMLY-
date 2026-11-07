@@ -11,7 +11,7 @@ export function signHomeyUpload(input: { authorizedAdmin: boolean; sku: string; 
   if (Math.abs(timestamp - Math.floor(Date.now() / 1000)) > 60) throw new Error('Invalid timestamp');
   const folder = 'homey/products/' + sku;
   const signature = createHash('sha1').update('folder=' + folder + '&timestamp=' + timestamp + apiSecret).digest('hex');
-  return { cloud_name: 'homeyegypt', api_key: apiKey, timestamp, folder, signature };
+  return { cloud_name: 'efpylmbh', api_key: apiKey, timestamp, folder, signature };
 }
 /** The route calling this helper MUST validate Supabase Auth server-side and verify
  * the user's admin role using existing project authorization rules before passing true.
