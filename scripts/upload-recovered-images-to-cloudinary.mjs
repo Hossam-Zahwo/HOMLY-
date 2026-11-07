@@ -1,11 +1,13 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 const rows=JSON.parse(await readFile('scripts/recovered-images-manifest.json','utf8')).rows;
 const cloud=process.env.CLOUDINARY_CLOUD_NAME;
 const apiKey=process.env.CLOUDINARY_API_KEY;
 const apiSecret=process.env.CLOUDINARY_API_SECRET;
 if(cloud!=='efpylmbh'||!apiKey||!apiSecret)throw Error('Missing Cloudinary credentials or unexpected cloud');
 const apply=process.env.RECOVERED_IMAGES_APPLY==='YES';
+// Cloudinary supports backend Basic Authentication without manual signatures.
+const cloudinaryAuth='Basic '+Buffer.from(apiKey+':'+apiSecret).toString('base64');
+
 const out={mode:apply?'apply':'dry-run',total:rows.length,success:[],failed:[],skipped:[]};
 await mkdir('migration-reports',{recursive:true});
 const save=()=>writeFile('migration-reports/recovered-images.json',JSON.stringify(out,null,2));
@@ -21,23 +23,19 @@ for(const row of rows){
   const bytes=await source.arrayBuffer();
   if(!bytes.byteLength||bytes.byteLength>20*1024*1024)throw Error('Invalid image size');
   const folder='homey/products/recovered-'+row.product_id;
-  const timestamp=Math.floor(Date.now()/1000);
-  const signature=createHash('sha1').update('folder='+folder+'&timestamp='+timestamp+apiSecret).digest('hex');
   const body=new FormData();
   body.set('file',new Blob([bytes],{type:contentType}),row.id+'.jpg');
   body.set('folder',folder);
-  body.set('timestamp',String(timestamp));
-  body.set('api_key',apiKey);
-  body.set('signature',signature);
-  const response=await fetch('https://api.cloudinary.com/v1_1/'+cloud+'/image/upload',{method:'POST',body,signal:AbortSignal.timeout(60000)});
+  const response=await fetch('https://api.cloudinary.com/v1_1/'+cloud+'/image/upload',{method:'POST',headers:{Authorization:cloudinaryAuth},body,signal:AbortSignal.timeout(60000)});
   const result=await response.json();
+  if(response.status===401||response.status===403)throw Object.assign(new Error('Cloudinary authentication denied (HTTP '+response.status+'). Update matching CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET GitHub Actions secrets from the same Cloudinary environment.'),{fatalAuth:true});
   if(!response.ok||!result.secure_url)throw Error('Cloudinary upload HTTP '+response.status+': '+(result.error?.message||'unknown'));
   const check=await fetch(result.secure_url,{method:'HEAD',signal:AbortSignal.timeout(20000)});
   if(!check.ok)throw Error('Cloudinary verify HTTP '+check.status);
   out.success.push({id:row.id,product_id:row.product_id,variant_id:row.variant_id,oldUrl:row.storage_path,newUrl:result.secure_url,publicId:result.public_id});
- }catch(e){out.failed.push({id:row.id,reason:String(e?.message||e)});}
+ }catch(e){out.failed.push({id:row.id,reason:String(e?.message||e)});if(e?.fatalAuth){console.error('STOP: Cloudinary authentication failed. No further image uploads attempted.');await save();break;}}
  await save();
 }
 await save();
-console.log(JSON.stringify({mode:out.mode,total:out.total,uploaded:out.success.length,failed:out.failed.length,skipped:out.skipped.length}));
+console.log(JSON.stringify({mode:out.mode,total:out.total,uploaded:out.success.length,failed:out.failed.length,skipped:out.skipped.length,remaining:out.total-out.success.length-out.failed.length-out.skipped.length,firstError:out.failed[0]?.reason||null}));
 if(out.failed.length)process.exitCode=2;
