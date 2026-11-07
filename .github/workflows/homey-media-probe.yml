@@ -1,0 +1,22 @@
+name: HOMEY live storage probe
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check old image and storefront availability (no credentials)
+        shell: bash
+        run: |
+          set +e
+          for url in             "https://hlcatmtjrmqaakwvfkwf.supabase.co/storage/v1/object/public/homly-products/010ba87b-735b-498b-8d17-754c648f180e.jpeg"             "https://hlcatmtjrmqaakwvfkwf.supabase.co/storage/v1/object/public/homly-products/0191684e-3b0e-4129-a71f-4cd6a4e831c6.jpeg"             "https://www.homeyegypt.com"             "https://tzbckxumztwwyytryarw.supabase.co/functions/v1/homey-admin-emergency"; do
+             printf 'PROBE %s\n' "$url"
+             curl --location --max-time 18 --silent --show-error -o /tmp/homey-body -w 'HTTP %{http_code} bytes %{size_download} content-type %{content_type}\n' "$url"
+             head -c 120 /tmp/homey-body | tr '\n' ' '
+             printf '\n'
+          done
