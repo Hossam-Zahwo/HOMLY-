@@ -31,11 +31,11 @@ export async function prepareHomeyImage(file: File): Promise<File> {
 export async function uploadHomeyImage(file: File, signer: () => Promise<SignedUpload>): Promise<HomeyUploadedImage> {
   const prepared = await prepareHomeyImage(file);
   const signed = await signer();
-  if (signed.cloud_name !== 'homeyegypt') throw new Error('Cloudinary account mismatch');
+  if (signed.cloud_name !== 'efpylmbh') throw new Error('Cloudinary account mismatch');
   const data = new FormData();
   data.set('file', prepared);
   for (const key of ['api_key', 'timestamp', 'signature', 'folder'] as const) data.set(key, String(signed[key]));
-  const response = await fetch('https://api.cloudinary.com/v1_1/homeyegypt/image/upload', { method: 'POST', body: data });
+  const response = await fetch('https://api.cloudinary.com/v1_1/efpylmbh/image/upload', { method: 'POST', body: data });
   const result = await response.json();
   if (!response.ok || !result.secure_url || !result.public_id) throw new Error(result.error?.message || 'فشل رفع الصورة');
   return { secure_url: result.secure_url, public_id: result.public_id, width: result.width, height: result.height, bytes: result.bytes, format: result.format };
