@@ -1,6 +1,6 @@
 # HOMEY Cloudinary migration — development only
 
-Cloud name: `homeyegypt`. This branch adds reusable browser compression/upload and server-only signing helpers; **it does not activate the Admin uploader yet**.
+Cloud name: `efpylmbh`. This branch adds reusable browser compression/upload and server-only signing helpers; **it does not activate the Admin uploader yet**.
 
 ## Required setup
 1. In Cloudinary Console > API Keys, copy the API Key and API Secret.
