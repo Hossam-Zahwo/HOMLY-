@@ -1,0 +1,56 @@
+name: Migrate HOMEY images to Cloudinary
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Dry run checks only; apply transfers images and updates records"
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - apply
+        default: dry-run
+permissions:
+  contents: read
+concurrency:
+  group: homey-image-migration
+  cancel-in-progress: false
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      HOMEY_SUPABASE_URL: ${{ secrets.HOMEY_SUPABASE_URL }}
+      HOMEY_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOMEY_SUPABASE_SERVICE_ROLE_KEY }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      HOMEY_MIGRATE_APPLY: ${{ inputs.mode == 'apply' && 'YES' || 'NO' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/cloudinary-media-homeyegypt
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Verify configuration
+        shell: bash
+        run: |
+          test -n "$HOMEY_SUPABASE_URL"
+          test -n "$HOMEY_SUPABASE_SERVICE_ROLE_KEY"
+          test -n "$CLOUDINARY_CLOUD_NAME"
+          test -n "$CLOUDINARY_API_KEY"
+          test -n "$CLOUDINARY_API_SECRET"
+      - name: Run migration script
+        run: node scripts/migrate-product-images-to-cloudinary.mjs
+      - name: Save report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: homey-cloudinary-${{ inputs.mode }}-${{ github.run_id }}
+          path: migration-reports/
+          retention-days: 30
+          if-no-files-found: warn
