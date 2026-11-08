@@ -1,6 +1,6 @@
 /**
- * Image processing is done in the merchant's browser, before Storage receives the
- * file. No image service, API key or paid plan is required.
+ * Image processing is done in the merchant's browser, before Cloudinary receives the
+ * file. Cloudinary API secrets remain server-only.
  * Uploaded filenames are UUIDs so long-lived CDN/browser caching is safe.
  */
 export type ImagePurpose = 'product' | 'category' | 'hero' | 'editorial' | 'logo';
@@ -74,7 +74,24 @@ export async function compressStoreImage(blob: Blob, purpose: ImagePurpose = 'pr
 export const allowStorageTransforms = import.meta.env.VITE_HOMEY_IMAGE_TRANSFORMS === 'true';
 const PUBLIC_MARKER = '/storage/v1/object/public/homly-products/';
 
+/** Cloudinary performs automatic format/quality negotiation without changing
+ * the stored secure_url. Only transform trusted public Cloudinary delivery URLs. */
+export function cloudinaryResponsiveImage(url:string,width:number):string {
+  try {
+    const parsed=new URL(url);
+    if(parsed.protocol!=='https:'||parsed.hostname!=='res.cloudinary.com')return url;
+    const marker='/image/upload/';
+    if(!parsed.pathname.includes(marker))return url;
+    // Transform only canonical uploaded URLs, not already-transformed URLs.
+    const [prefix,suffix]=parsed.pathname.split(marker);
+    if(!/^v\d+\//.test(suffix))return url;
+    parsed.pathname=prefix+marker+`f_auto,q_auto,c_limit,w_${Math.max(64,Math.min(2000,Math.floor(width)))}/`+suffix;
+    return parsed.href;
+  }catch{return url;}
+}
+
 export function supabaseResponsiveImage(url: string, width: number, quality = 78): string {
+  if (url.startsWith('https://res.cloudinary.com/')) return cloudinaryResponsiveImage(url,width);
   if (!allowStorageTransforms || !url.includes(PUBLIC_MARKER)) return url;
   const [pathname] = url.split('?');
   // Never append untrusted query parameters; only use public images in our bucket.
@@ -83,5 +100,5 @@ export function supabaseResponsiveImage(url: string, width: number, quality = 78
 }
 
 export function hasResponsiveTransform(url: string): boolean {
-  return allowStorageTransforms && url.includes(PUBLIC_MARKER);
+  return url.startsWith('https://res.cloudinary.com/') || (allowStorageTransforms && url.includes(PUBLIC_MARKER));
 }

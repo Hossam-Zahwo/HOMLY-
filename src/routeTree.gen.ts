@@ -31,6 +31,7 @@ import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as PageSlugRouteImport } from './routes/page.$slug'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as ReviewTokenRouteImport } from './routes/review.$token'
+import { Route as ApiMediaSignRouteImport } from './routes/api.media.sign'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -142,6 +143,11 @@ const ReviewTokenRoute = ReviewTokenRouteImport.update({
   path: '/review/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMediaSignRoute = ApiMediaSignRouteImport.update({
+  id: '/api/media/sign',
+  path: '/api/media/sign',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/product/$slug': typeof ProductSlugRoute
   '/review/$token': typeof ReviewTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/api/media/sign': typeof ApiMediaSignRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/product/$slug': typeof ProductSlugRoute
   '/review/$token': typeof ReviewTokenRoute
   '/admin': typeof AdminIndexRoute
+  '/api/media/sign': typeof ApiMediaSignRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -215,6 +223,7 @@ export interface FileRoutesById {
   '/product/$slug': typeof ProductSlugRoute
   '/review/$token': typeof ReviewTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/api/media/sign': typeof ApiMediaSignRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/product/$slug'
     | '/review/$token'
     | '/admin/'
+    | '/api/media/sign'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/product/$slug'
     | '/review/$token'
     | '/admin'
+    | '/api/media/sign'
   id:
     | '__root__'
     | '/'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/product/$slug'
     | '/review/$token'
     | '/admin/'
+    | '/api/media/sign'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -314,6 +326,7 @@ export interface RootRouteChildren {
   ProductSlugRoute: typeof ProductSlugRoute
   ReviewTokenRoute: typeof ReviewTokenRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  ApiMediaSignRoute: typeof ApiMediaSignRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -472,6 +485,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/media/sign': {
+      id: '/api/media/sign'
+      path: '/api/media/sign'
+      fullPath: '/api/media/sign'
+      preLoaderRoute: typeof ApiMediaSignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -498,6 +518,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProductSlugRoute: ProductSlugRoute,
   ReviewTokenRoute: ReviewTokenRoute,
   AdminIndexRoute: AdminIndexRoute,
+  ApiMediaSignRoute: ApiMediaSignRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

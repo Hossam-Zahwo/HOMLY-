@@ -1,4 +1,5 @@
-import { compressStoreImage, type ImagePurpose } from './image-optimization';
+import { type ImagePurpose } from './image-optimization';
+import { uploadCloudinaryImage } from './cloudinary-upload';
 import { supabase, requireConnection } from './supabase';
 // Probe ONE known public image without blocking catalog rendering. During Supabase
 // 402 we show lightweight placeholders. Once the gateway responds 200 again,
@@ -292,88 +293,52 @@ export function storedImagePath(url:string):string {
 }
 export async function saveProduct(p: Product) { requireConnection(); const payload={...p,images:p.images.map(storedImagePath),variants:p.variants.map(v=>({...v,images:v.images.map(storedImagePath)}))}; const { data, error } = await supabase.rpc('homly_save_product', { payload }); check(error); if(typeof data!=='string'||!data)throw new Error('لم يصل معرف المنتج المحفوظ من قاعدة البيانات'); const saved=await supabase.from('homly_products').select('id').eq('id',data).single();check(saved.error);if(!saved.data?.id)throw new Error('تعذر التحقق من حفظ المنتج؛ حدّث القائمة قبل إعادة الحفظ'); window.dispatchEvent(new Event('homy-catalog-changed')); return data; }
 export async function saveCategory(c: Partial<Category>) { requireConnection(); const {data,error}=await supabase.from('homly_categories').upsert({ ...c,id:c.id||undefined }).select('id').single();check(error);if(!data?.id)throw new Error('لم يصل تأكيد حفظ القسم من قاعدة البيانات'); }
-/** Resize/compress before upload; immutable unique paths allow strong caching. */
-export async function uploadImage(file: File, purpose: ImagePurpose = 'product') {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 15 * 1024 * 1024)
-        throw new Error('الصورة لازم تكون JPG أو PNG أو WebP وبحجم أقل من 15MB قبل الضغط');
-    requireConnection();
-    const optimized = await compressStoreImage(file, purpose);
-    if (optimized.size > 5 * 1024 * 1024) throw new Error('تعذر ضغط الصورة تحت 5MB. اختار صورة أصغر أو صدّرها بصيغة WebP.');
-    const extension = optimized.type === 'image/webp' ? 'webp' : file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
-    const path = crypto.randomUUID() + '.' + extension;
-    const { error } = await supabase.storage.from('homly-products').upload(path, optimized, {
-        upsert: false,
-        contentType: optimized.type || file.type,
-        cacheControl: '31536000',
-    });
-    check(error);
-    return supabase.storage.from('homly-products').getPublicUrl(path).data.publicUrl;
+/** Images are uploaded to Cloudinary only. Supabase stores HTTPS URLs, never binary media. */
+export async function uploadImage(file: File, purpose: ImagePurpose = 'product'): Promise<string> {
+    return (await uploadCloudinaryImage(file, purpose)).secure_url;
 }
 
-/** Prepare a lighter copy of an already-uploaded CMS/category image. Callers
- * must save/publish their updated path; this never mutates the original object. */
+/** Existing Cloudinary images are automatically optimized at delivery time.
+ * Legacy Supabase images can be migrated only when their source is reachable. */
 export async function optimizeStoredAsset(image: string, purpose: ImagePurpose = 'product') {
-    requireConnection();
     const url = assetUrl(image);
-    if (!url.includes('/storage/v1/object/public/homly-products/'))
-        throw new Error('الصورة دي مش مرفوعة على تخزين هومي. اختار الملف الأصلي وارفعه تاني علشان يتضغط تلقائيًا.');
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('تعذر تحميل الصورة: HTTP ' + response.status);
-    const original = await response.blob();
-    if (!['image/jpeg','image/png','image/webp'].includes(original.type)) throw new Error('صيغة الصورة غير مدعومة للضغط.');
-    const compressed = await compressStoreImage(original, purpose);
-    if (compressed.type !== 'image/webp' || compressed.size >= original.size * 0.92)
+    if (url.startsWith('https://res.cloudinary.com/'))
         return {path: image, optimized: false, savedBytes: 0};
-    const path = crypto.randomUUID() + '.webp';
-    const {error} = await supabase.storage.from('homly-products').upload(path, compressed, {
-        upsert: false, contentType: 'image/webp', cacheControl: '31536000',
-    });
-    check(error);
-    return {path: supabase.storage.from('homly-products').getPublicUrl(path).data.publicUrl, optimized: true, savedBytes: original.size - compressed.size};
+    if (!url.includes('/storage/v1/object/public/homly-products/'))
+        throw new Error('اختار ملف الصورة الأصلي علشان نرفعه على Cloudinary.');
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('تعذر الوصول للصورة القديمة (HTTP ' + response.status + '). ارفع نسختها الأصلية من جهازك.');
+    const original = await response.blob();
+    if (!['image/jpeg','image/png','image/webp'].includes(original.type)) throw new Error('الصورة القديمة غير مدعومة.');
+    const uploaded = await uploadCloudinaryImage(new File([original], 'homey-recovered-image', {type:original.type}), purpose);
+    return {path: uploaded.secure_url, optimized: true, savedBytes: Math.max(0, original.size-uploaded.bytes)};
 }
 
-/**
- * Opt-in, non-destructive optimization of the images already used by a product.
- * Old objects are never overwritten or removed. If the product save fails, the
- * original product and every old image remain untouched.
- */
+/** Non-destructively migrate reachable legacy product images. Missing source
+ * images must be uploaded manually; no placeholder or silent fallback is saved. */
 export async function optimizeExistingProductImages(product: Product) {
-    requireConnection();
     const allImages = [...product.images, ...product.variants.flatMap(v => v.images)];
-    const replacements = new Map<string, string>();
-    let optimizedCount = 0;
-    let bytesBefore = 0;
-    let bytesAfter = 0;
+    const replacements = new Map<string,string>();
+    let optimizedCount=0, bytesBefore=0, bytesAfter=0;
     for (const image of new Set(allImages)) {
         const url = assetUrl(image);
-        // Only process existing objects from Homey's own public Storage bucket.
         if (!url.includes('/storage/v1/object/public/homly-products/')) continue;
         const response = await fetch(url);
-        if (!response.ok) throw new Error('تعذر تحميل صورة قديمة للضغط: ' + response.status);
+        if (!response.ok) throw new Error('تعذر استعادة صورة قديمة (HTTP '+response.status+'). لن يتم تغيير المنتج.');
         const original = await response.blob();
-        if (!['image/jpeg', 'image/png', 'image/webp'].includes(original.type)) continue;
-        const compressed = await compressStoreImage(original, 'product');
-        if (compressed.type !== 'image/webp' || compressed.size >= original.size * 0.92) continue;
-        const freshPath = crypto.randomUUID() + '.webp';
-        const {error} = await supabase.storage.from('homly-products').upload(freshPath, compressed, {
-            upsert: false, contentType: 'image/webp', cacheControl: '31536000',
-        });
-        check(error);
-        replacements.set(image, supabase.storage.from('homly-products').getPublicUrl(freshPath).data.publicUrl);
-        optimizedCount++;
-        bytesBefore += original.size;
-        bytesAfter += compressed.size;
+        if (!['image/jpeg','image/png','image/webp'].includes(original.type)) continue;
+        const result = await uploadCloudinaryImage(new File([original],'homey-migrated-image',{type:original.type}),'product');
+        replacements.set(image,result.secure_url);
+        optimizedCount++;bytesBefore+=original.size;bytesAfter+=result.bytes;
     }
-    if (optimizedCount) {
-        const newProduct = {
-            ...product,
-            images: product.images.map(img => replacements.get(img) || img),
-            variants: product.variants.map(v => ({...v, images: v.images.map(img => replacements.get(img) || img)})),
-        };
-        await saveProduct(newProduct);
-    }
-    return {optimizedCount, bytesBefore, bytesAfter};
+    if (optimizedCount) await saveProduct({
+        ...product,
+        images: product.images.map(img=>replacements.get(img)||img),
+        variants: product.variants.map(v=>({...v,images:v.images.map(img=>replacements.get(img)||img)})),
+    });
+    return {optimizedCount,bytesBefore,bytesAfter};
 }
+
 export async function orders(): Promise<Order[]> { requireConnection(); const { data, error } = await supabase.from('homly_orders').select('*,homly_order_items(*),homly_order_status_history(*),homly_order_item_checks(*)').order('created_at', { ascending: false }); check(error); return (data || []).map(o => ({ ...o, items: (o.homly_order_items||[]).map((i:any)=>({...i,image_snapshot:assetUrl(i.image_snapshot)})), history: o.homly_order_status_history, checks: o.homly_order_item_checks || [] })); }
 /** Only unfulfilled, unpaid orders can be permanently removed as test orders. */
 export function isDeletableTestOrder(order: Order): boolean {

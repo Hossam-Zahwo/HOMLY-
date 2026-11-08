@@ -43,6 +43,10 @@ function ProductPage() {
   const p = products.find((product) => product.variants.some((variant) => variant.slug === slug));
   const v = p?.variants.find((variant) => variant.slug === slug);
   const {has,toggle} = useFavorites();
+  // Hooks must run in the same order on loading, error, and ready renders.
+  // Keeping these before the early returns fixes "Rendered more hooks".
+  const cart = useCart();
+  const navigate = useNavigate();
   const [photo, setPhoto] = useState(0);
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState('description');
@@ -62,8 +66,6 @@ function ProductPage() {
   const currentPhoto = Math.min(photo, Math.max(0, gallery.length - 1));
   const available = v.stock_on_hand - v.stock_reserved;
   const related = cards(products.filter((product) => product.id !== p.id && product.categories.some((id) => p.categories.includes(id)))).slice(0, 4);
-  const cart = useCart();
-  const navigate = useNavigate();
   const addItem = () => {
     if (available < qty) return;
     cart.add(v.id, qty);

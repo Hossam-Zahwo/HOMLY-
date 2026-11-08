@@ -23,3 +23,15 @@ node_modules/
 dist/
 .output/
 .vercel/
+
+# Local backups and temporary repair folders
+src_backup*/
+routes_backup/
+_homey_fix/
+homey-complete-repair/
+*.log
+*.tsbuildinfo
+
+# Local credentials
+.env.local
+.env.production.local
