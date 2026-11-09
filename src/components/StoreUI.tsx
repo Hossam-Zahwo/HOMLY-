@@ -1,4 +1,5 @@
 import './local-orders.css';
+import homeyWordmark from '/homey-wordmark.svg?raw';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus, Zap, Heart } from 'lucide-react';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
@@ -22,10 +23,12 @@ import { configured } from '@/lib/supabase';
 import { useSite, useCopy } from '@/lib/site';
 import { safeHref, whatsappHref } from '@/lib/content-model';
 import { toast } from 'sonner';
+const homeyWordmarkUrl = 'data:image/svg+xml,' + encodeURIComponent(homeyWordmark);
+
 export function Logo() {
     const { config } = useSite();
     return <Link to="/" className="logo" aria-label={config.brand.name + ' الرئيسية'}>
-        <img src="/homey-wordmark.svg" alt={config.brand.name}
+        <img src={homeyWordmarkUrl} width={130} height={64} alt={config.brand.name}
           style={{width:"auto",height:"auto",maxHeight:64,maxWidth:190,objectFit:"contain"}}/>
     </Link>;
 }

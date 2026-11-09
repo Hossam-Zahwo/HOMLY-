@@ -9,3 +9,19 @@
   .store-header .header-main > .logo { display: flex; align-items: center; }
   .store-header .homey-local-orders-link { padding-inline: .25rem; }
 }
+
+@media (max-width: 767px) {
+  .store-header .header-main > .logo {
+    display: grid;
+    place-items: center;
+    width: min(100%, 112px);
+    min-height: 44px;
+    overflow: visible;
+  }
+  .store-header .header-main > .logo img {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 44px !important;
+  }
+}
