@@ -24,14 +24,8 @@ import { safeHref, whatsappHref } from '@/lib/content-model';
 import { toast } from 'sonner';
 export function Logo() {
     const { config } = useSite();
-    const officialLogo = '/HOMEY-olive-removebg-preview.png';
-    const logo = config.brand.logo ? assetUrl(config.brand.logo) : officialLogo;
     return <Link to="/" className="logo" aria-label={config.brand.name + ' الرئيسية'}>
-        <img src={logo === '/placeholder.svg' ? officialLogo : logo} alt={config.brand.name}
-          onError={event => {
-            const img = event.currentTarget;
-            if (img.getAttribute('src') !== officialLogo) img.src = officialLogo;
-          }}
+        <img src="/homey-wordmark.svg" alt={config.brand.name}
           style={{width:"auto",height:"auto",maxHeight:64,maxWidth:190,objectFit:"contain"}}/>
     </Link>;
 }
