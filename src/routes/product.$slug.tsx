@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {ShoppingCart,Check,ChevronLeft,ChevronRight,Zap,Heart} from 'lucide-react';
 import {toast} from 'sonner';
 import {useCatalog,Picture,Notice,Loading,ProductCard,Section,Quantity,TrustStrip} from '@/components/StoreUI';
-import {imageFor,money,cards} from '@/lib/commerce';
+import {imageFor,money,cards,availableStock} from '@/lib/commerce';
 import {PublicReviews} from '@/components/Reviews';
 import {useCopy} from '@/lib/site';
 import {useFavorites} from '@/lib/favorites';
@@ -64,7 +64,7 @@ function ProductPage() {
   const title = latinDigits(v.title_override || p.title_ar);
   const gallery = [...new Set([...v.images, ...p.images].filter(src => src && src !== '/placeholder.svg'))];
   const currentPhoto = Math.min(photo, Math.max(0, gallery.length - 1));
-  const available = v.stock_on_hand - v.stock_reserved;
+  const available = availableStock(v);
   const related = cards(products.filter((product) => product.id !== p.id && product.categories.some((id) => p.categories.includes(id)))).slice(0, 4);
   const addItem = () => {
     if (available < qty) return;

@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus, Zap, Heart } from 'lucide-react';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
-import { catalog, explain, money, imageFor, assetUrl, type Catalog, type Product, type Variant } from '@/lib/commerce';
+import { catalog, explain, money, imageFor, assetUrl, availableStock, type Catalog, type Product, type Variant } from '@/lib/commerce';
 import { useCart } from '@/lib/cart';
 import {useFavorites} from '@/lib/favorites';
 import {latinDigits} from '@/lib/digits';
@@ -318,7 +318,7 @@ export function ProductCard({ p, v, priority = false }: {
         if (buying || stock < 1) return;
         void navigate({ to: '/cart', search: {checkout: true, buyNow: v.id, qty: 1} });
     };
-    const stock = v.stock_on_hand - v.stock_reserved;
+    const stock = availableStock(v);
     const title = latinDigits(v.title_override || p.title_ar);
     const options = latinDigits(Object.values(v.options).filter(Boolean).join(' / '));
     const hasDiscount = Boolean(v.compare_at_minor && v.compare_at_minor > v.price_minor);
@@ -345,6 +345,7 @@ export function ProductCard({ p, v, priority = false }: {
             </div>
             <div className="homey-card-actions">
                 <button type="button" disabled={stock < 1 || buying} className="btn compact homey-card-add" onClick={() => {
+                    if (stock < 1) return;
                     cart.add(v.id);
                     toast.success('اتضاف للسلة', {duration: 1000});
                 }}><ShoppingCart size={15}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button>

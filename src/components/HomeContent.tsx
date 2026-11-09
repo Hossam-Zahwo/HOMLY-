@@ -3,7 +3,7 @@ import {ArrowLeft, ChevronLeft, ChevronRight, MoveHorizontal, Sparkles} from 'lu
 import {Link} from '@tanstack/react-router';
 import {useSite} from '@/lib/site';
 import {safeHref, type HomeBlock} from '@/lib/content-model';
-import {cards, type Category, type Product, type Variant} from '@/lib/commerce';
+import {cards, availableStock, type Category, type Product, type Variant} from '@/lib/commerce';
 import {budgetProducts} from '@/lib/budget-products';
 import {rotateHomeCards} from '@/lib/home-product-rotation';
 import {latinDigits} from '@/lib/digits';
@@ -18,11 +18,12 @@ type ProductItem = {p: Product; v: Variant};
 /** Keep all manually chosen rows as authored. Give automatic storefront sections room to show more products. */
 function selection(block: HomeBlock, all: ProductItem[], seed: number) {
   const limit = Math.min(12, Math.max(1, block.source === 'manual' ? block.limit : block.type === 'products' ? Math.max(8, block.limit) : block.type === 'editorial' ? Math.max(4, block.limit) : block.limit));
-  const available = all.filter(({v}) => v.stock_on_hand > v.stock_reserved);
   if (block.source === 'manual') {
-    return block.variantIds.map(id => available.find(({v}) => v.id === id)).filter((x): x is ProductItem => Boolean(x)).slice(0, limit);
+    return block.variantIds.map(id => all.find(({v}) => v.id === id)).filter((x): x is ProductItem => Boolean(x))
+      .sort((a, b) => Number(availableStock(b.v) > 0) - Number(availableStock(a.v) > 0))
+      .slice(0, limit);
   }
-  let rows = available.filter(({p,v}) => block.source === 'category'
+  let rows = all.filter(({p,v}) => block.source === 'category'
     ? p.categories.includes(block.categoryId)
     : block.source === 'offers' ? (v.compare_at_minor || 0) > v.price_minor : true);
   if (block.type === 'budget') rows = rows.filter(({v}) => v.price_minor <= block.maxPrice * 100);
@@ -136,12 +137,11 @@ export function HomeContent() {
   const [visitSeed,setVisitSeed] = useState(0);
   useEffect(() => setVisitSeed(Math.floor(Math.random()*0x7fffffff)+1), []);
   const all = useMemo(() => cards(products), [products]);
-  const ready = useMemo(() => all.filter(({v}) => v.stock_on_hand > v.stock_reserved), [all]);
-  const homeItems = useMemo(() => rotateHomeCards(ready,visitSeed,'homey-first-products'), [ready,visitSeed]);
+  const homeItems = useMemo(() => rotateHomeCards(all,visitSeed,'homey-first-products'), [all,visitSeed]);
   const visibleBlocks = config.blocks.filter(b=>b.visible);
   const hero = visibleBlocks.find(b=>b.type==='hero');
   const rest = visibleBlocks.filter(b=>b.type!=='hero');
-  const categorySections = categories.map(cat=>({cat,items:ready.filter(({p})=>p.categories.includes(cat.id))})).filter(row=>row.items.length >= 2).slice(0,3);
+  const categorySections = categories.map(cat=>({cat,items:all.filter(({p})=>p.categories.includes(cat.id))})).filter(row=>row.items.length >= 2).slice(0,3);
   const firstProducts = homeItems.slice(0,8);
   const usedIds = new Set(firstProducts.map(({v})=>v.id));
   const remaining = homeItems.filter(({v})=>!usedIds.has(v.id));
