@@ -13,7 +13,7 @@ export async function uploadCloudinaryImage(file:File,purpose:ImagePurpose='prod
   if(sessionError||!session?.access_token)throw new Error('سجّل الدخول كأدمن هومي الأول.');
   const resized=await compressStoreImage(file,purpose);
   if(resized.size>MAX_UPLOAD)throw new Error('حجم الصورة بعد الضغط أكبر من 5MB. اختار صورة أصغر.');
-  const signedResponse=await fetch('/api/media/sign',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({purpose}),cache:'no-store'});
+  const signedResponse=await fetch('/api/media/sign',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({purpose,signatureVersion:2}),cache:'no-store'});
   const signed=await signedResponse.json().catch(()=>null);
   if(!signedResponse.ok||!signed?.signature) throw new Error(signed?.error||'تعذر توقيع رفع الصورة. تأكد من إعدادات Cloudinary على السيرفر.');
   if(!/^[a-zA-Z0-9_-]+$/.test(signed.cloud_name))throw new Error('إعدادات Cloudinary غير صالحة.');

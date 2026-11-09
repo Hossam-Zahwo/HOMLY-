@@ -18,7 +18,8 @@ export const Route=createFileRoute('/api/media/sign')({
       const token=request.headers.get('authorization')?.match(/^Bearer ([A-Za-z0-9._~-]+)$/)?.[1];
       if(!token)return error('لازم تسجل الدخول كأدمن هومي.',401);
       let purpose='product';
-      try{const input=await request.json();purpose=input?.purpose;}catch{return error('بيانات الرفع غير صالحة.',400)}
+      let usePublicId=false;
+      try{const input=await request.json();purpose=input?.purpose;usePublicId=input?.signatureVersion===2;}catch{return error('بيانات الرفع غير صالحة.',400)}
       if(!['product','category','hero','editorial','logo'].includes(purpose))return error('نوع الصورة غير مدعوم.',400);
       // Validate access token with Supabase Auth, then authorize via the existing
       // database-backed admin function. Browser can never sign its own uploads.
@@ -30,15 +31,17 @@ export const Route=createFileRoute('/api/media/sign')({
       // The existing homly_check_image() SQL function requires this exact URL prefix
       // and a unique segment after homey/products. Do not change without a DB migration.
       if(cloud_name!=='efpylmbh')return error('Cloudinary project does not match the database allowlist.',503);
-      const public_id='homey/products/'+crypto.randomUUID()+'/image';
+      const folder='homey/products/'+crypto.randomUUID();
+      const parameters=usePublicId?{public_id:folder+'/image'}:{folder};
       const timestamp=Math.floor(Date.now()/1000);
       const encoder=new TextEncoder();
       // Cloudinary upload signatures are SHA-1 of canonical parameters + API secret,
       // NOT an HMAC-SHA1. Keep the secret on the server only.
-      const canonical='public_id='+public_id+'&timestamp='+timestamp;
+      const [name,value]=Object.entries(parameters)[0];
+      const canonical=name+'='+value+'&timestamp='+timestamp;
       const digest=await crypto.subtle.digest('SHA-1',encoder.encode(canonical+secret));
       const signature=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
-      return Response.json({cloud_name,api_key,public_id,timestamp,signature},{headers:{'Cache-Control':'no-store'}});
+      return Response.json({cloud_name,api_key,...parameters,timestamp,signature},{headers:{'Cache-Control':'no-store'}});
     },
   }},
 });
