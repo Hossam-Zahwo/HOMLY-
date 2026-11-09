@@ -19,11 +19,17 @@ export async function uploadCloudinaryImage(file:File,purpose:ImagePurpose='prod
   if(!/^[a-zA-Z0-9_-]+$/.test(signed.cloud_name))throw new Error('إعدادات Cloudinary غير صالحة.');
   const form=new FormData();
   form.set('file',resized,file.name.replace(/\.[^.]+$/,'')+(resized.type==='image/webp'?'.webp':'.jpg'));
-  for(const key of ['api_key','timestamp','signature','folder'] as const)form.set(key,String(signed[key]));
+  for(const key of ['api_key','timestamp','signature','public_id'] as const)form.set(key,String(signed[key]));
   const response=await fetch(`https://api.cloudinary.com/v1_1/${signed.cloud_name}/image/upload`,{method:'POST',body:form});
   const uploaded=await response.json().catch(()=>null);
-  if(!response.ok||!uploaded?.secure_url||!uploaded?.public_id)throw new Error(uploaded?.error?.message||'فشل رفع الصورة على Cloudinary.');
+  if(!response.ok||!uploaded?.secure_url||!uploaded?.public_id){
+    const message=uploaded?.error?.message;
+    if(typeof message==='string'&&/^Invalid Signature\b/i.test(message)){
+      throw new Error('Cloudinary رفض توقيع الرفع. راجع تطابق مفتاح Cloudinary والسر على السيرفر، ثم جرّب تاني.');
+    }
+    throw new Error(message||'فشل رفع الصورة على Cloudinary.');
+  }
   const parsed=new URL(uploaded.secure_url);
-  if(parsed.protocol!=='https:'||parsed.hostname!=='res.cloudinary.com'||!parsed.pathname.startsWith('/'+signed.cloud_name+'/image/upload/')||!uploaded.public_id.startsWith(signed.folder+'/'))throw new Error('Cloudinary رجّع رابطًا غير متوقع، ولم يتم حفظ الصورة.');
+  if(parsed.protocol!=='https:'||parsed.hostname!=='res.cloudinary.com'||!parsed.pathname.startsWith('/'+signed.cloud_name+'/image/upload/')||uploaded.public_id!==signed.public_id)throw new Error('Cloudinary رجّع رابطًا غير متوقع، ولم يتم حفظ الصورة.');
   return {secure_url:uploaded.secure_url,public_id:uploaded.public_id,bytes:Number(uploaded.bytes)||resized.size,format:String(uploaded.format||'')};
 }

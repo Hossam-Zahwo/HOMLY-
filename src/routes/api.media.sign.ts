@@ -9,9 +9,9 @@ export const Route=createFileRoute('/api/media/sign')({
   server:{handlers:{
     POST:async({request})=>{
       const env=process.env;
-      const cloud_name=env.CLOUDINARY_CLOUD_NAME;
-      const api_key=env.CLOUDINARY_API_KEY;
-      const secret=env.CLOUDINARY_API_SECRET;
+      const cloud_name=env.CLOUDINARY_CLOUD_NAME?.trim();
+      const api_key=env.CLOUDINARY_API_KEY?.trim();
+      const secret=env.CLOUDINARY_API_SECRET?.trim();
       const url=env.VITE_SUPABASE_URL;
       const publishable=env.VITE_SUPABASE_PUBLISHABLE_KEY||env.VITE_SUPABASE_ANON_KEY;
       if(!cloud_name||!api_key||!secret||!url||!publishable)return error('ربط Cloudinary غير مكتمل على السيرفر.',503);
@@ -30,15 +30,15 @@ export const Route=createFileRoute('/api/media/sign')({
       // The existing homly_check_image() SQL function requires this exact URL prefix
       // and a unique segment after homey/products. Do not change without a DB migration.
       if(cloud_name!=='efpylmbh')return error('Cloudinary project does not match the database allowlist.',503);
-      const folder='homey/products/'+crypto.randomUUID();
+      const public_id='homey/products/'+crypto.randomUUID()+'/image';
       const timestamp=Math.floor(Date.now()/1000);
       const encoder=new TextEncoder();
       // Cloudinary upload signatures are SHA-1 of canonical parameters + API secret,
       // NOT an HMAC-SHA1. Keep the secret on the server only.
-      const canonical='folder='+folder+'&timestamp='+timestamp;
+      const canonical='public_id='+public_id+'&timestamp='+timestamp;
       const digest=await crypto.subtle.digest('SHA-1',encoder.encode(canonical+secret));
       const signature=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
-      return Response.json({cloud_name,api_key,folder,timestamp,signature},{headers:{'Cache-Control':'no-store'}});
+      return Response.json({cloud_name,api_key,public_id,timestamp,signature},{headers:{'Cache-Control':'no-store'}});
     },
   }},
 });
