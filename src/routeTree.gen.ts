@@ -27,10 +27,12 @@ import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminUsageRouteImport } from './routes/admin.usage'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as PageSlugRouteImport } from './routes/page.$slug'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as ReviewTokenRouteImport } from './routes/review.$token'
+import { Route as ApiAdminUsageRouteImport } from './routes/api.admin.usage'
 import { Route as ApiMediaSignRouteImport } from './routes/api.media.sign'
 
 const IndexRoute = IndexRouteImport.update({
@@ -123,6 +125,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/admin/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUsageRoute = AdminUsageRouteImport.update({
+  id: '/admin/usage',
+  path: '/admin/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategorySlugRoute = CategorySlugRouteImport.update({
   id: '/category/$slug',
   path: '/category/$slug',
@@ -141,6 +148,11 @@ const ProductSlugRoute = ProductSlugRouteImport.update({
 const ReviewTokenRoute = ReviewTokenRouteImport.update({
   id: '/review/$token',
   path: '/review/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminUsageRoute = ApiAdminUsageRouteImport.update({
+  id: '/api/admin/usage',
+  path: '/api/admin/usage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMediaSignRoute = ApiMediaSignRouteImport.update({
@@ -167,11 +179,13 @@ export interface FileRoutesByFullPath {
   '/admin/products': typeof AdminProductsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/review/$token': typeof ReviewTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/api/admin/usage': typeof ApiAdminUsageRoute
   '/api/media/sign': typeof ApiMediaSignRoute
 }
 export interface FileRoutesByTo {
@@ -192,11 +206,13 @@ export interface FileRoutesByTo {
   '/admin/products': typeof AdminProductsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/review/$token': typeof ReviewTokenRoute
   '/admin': typeof AdminIndexRoute
+  '/api/admin/usage': typeof ApiAdminUsageRoute
   '/api/media/sign': typeof ApiMediaSignRoute
 }
 export interface FileRoutesById {
@@ -218,11 +234,13 @@ export interface FileRoutesById {
   '/admin/products': typeof AdminProductsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/review/$token': typeof ReviewTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/api/admin/usage': typeof ApiAdminUsageRoute
   '/api/media/sign': typeof ApiMediaSignRoute
 }
 export interface FileRouteTypes {
@@ -245,11 +263,13 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/reviews'
     | '/admin/settings'
+    | '/admin/usage'
     | '/category/$slug'
     | '/page/$slug'
     | '/product/$slug'
     | '/review/$token'
     | '/admin/'
+    | '/api/admin/usage'
     | '/api/media/sign'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -270,11 +290,13 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/reviews'
     | '/admin/settings'
+    | '/admin/usage'
     | '/category/$slug'
     | '/page/$slug'
     | '/product/$slug'
     | '/review/$token'
     | '/admin'
+    | '/api/admin/usage'
     | '/api/media/sign'
   id:
     | '__root__'
@@ -295,11 +317,13 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/reviews'
     | '/admin/settings'
+    | '/admin/usage'
     | '/category/$slug'
     | '/page/$slug'
     | '/product/$slug'
     | '/review/$token'
     | '/admin/'
+    | '/api/admin/usage'
     | '/api/media/sign'
   fileRoutesById: FileRoutesById
 }
@@ -321,11 +345,13 @@ export interface RootRouteChildren {
   AdminProductsRoute: typeof AdminProductsRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminUsageRoute: typeof AdminUsageRoute
   CategorySlugRoute: typeof CategorySlugRoute
   PageSlugRoute: typeof PageSlugRoute
   ProductSlugRoute: typeof ProductSlugRoute
   ReviewTokenRoute: typeof ReviewTokenRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  ApiAdminUsageRoute: typeof ApiAdminUsageRoute
   ApiMediaSignRoute: typeof ApiMediaSignRoute
 }
 
@@ -457,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/usage': {
+      id: '/admin/usage'
+      path: '/admin/usage'
+      fullPath: '/admin/usage'
+      preLoaderRoute: typeof AdminUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/category/$slug': {
       id: '/category/$slug'
       path: '/category/$slug'
@@ -483,6 +516,13 @@ declare module '@tanstack/react-router' {
       path: '/review/$token'
       fullPath: '/review/$token'
       preLoaderRoute: typeof ReviewTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/usage': {
+      id: '/api/admin/usage'
+      path: '/api/admin/usage'
+      fullPath: '/api/admin/usage'
+      preLoaderRoute: typeof ApiAdminUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/media/sign': {
@@ -513,11 +553,13 @@ const rootRouteChildren: RootRouteChildren = {
   AdminProductsRoute: AdminProductsRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminUsageRoute: AdminUsageRoute,
   CategorySlugRoute: CategorySlugRoute,
   PageSlugRoute: PageSlugRoute,
   ProductSlugRoute: ProductSlugRoute,
   ReviewTokenRoute: ReviewTokenRoute,
   AdminIndexRoute: AdminIndexRoute,
+  ApiAdminUsageRoute: ApiAdminUsageRoute,
   ApiMediaSignRoute: ApiMediaSignRoute,
 }
 export const routeTree = rootRouteImport
