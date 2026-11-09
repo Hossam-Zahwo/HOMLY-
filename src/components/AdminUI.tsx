@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   LayoutDashboard, Package, Tags, ShoppingCart, Settings, FilePenLine,
-  Star, Menu, X, Store, LogOut, Users, ChevronsRight, ChevronsLeft,
+  Star, Database, Menu, X, Store, LogOut, Users, ChevronsRight, ChevronsLeft,
 } from 'lucide-react';
 import { getCurrentAdmin, signOutAdmin } from '@/lib/admin';
 import { initializeStore } from '@/lib/initialize-store';
@@ -17,6 +17,7 @@ const nav = [
   { to: '/admin/customers', label: 'العملاء', icon: Users },
   { to: '/admin/reviews', label: 'التقييمات والمراجعة', icon: Star },
   { to: '/admin/content', label: 'محتوى وتصميم المتجر', icon: FilePenLine },
+  { to: '/admin/usage', label: 'التخزين والاستخدام', icon: Database },
   { to: '/admin/settings', label: 'الإعدادات والربط', icon: Settings },
 ] as const;
 
