@@ -1,7 +1,9 @@
+import './local-orders.css';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus, Zap, Heart } from 'lucide-react';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { catalog, explain, money, imageFor, assetUrl, availableStock, type Catalog, type Product, type Variant } from '@/lib/commerce';
+import { useLocalOrders } from '@/lib/local-orders';
 import { useCart } from '@/lib/cart';
 import {useFavorites} from '@/lib/favorites';
 import {latinDigits} from '@/lib/digits';
@@ -20,7 +22,19 @@ import { configured } from '@/lib/supabase';
 import { useSite, useCopy } from '@/lib/site';
 import { safeHref, whatsappHref } from '@/lib/content-model';
 import { toast } from 'sonner';
-export function Logo() { const { config } = useSite(); return <Link to="/" className="logo" aria-label={config.brand.name + ' الرئيسية'}>{config.brand.logo ? <img src={assetUrl(config.brand.logo)} alt={config.brand.name} style={{width:"auto",height:"auto",maxHeight:64,maxWidth:190,objectFit:"contain"}}/> : <><b>{config.brand.name}</b><small>{config.brand.latin}</small></>}</Link>; }
+export function Logo() {
+    const { config } = useSite();
+    const officialLogo = '/HOMEY-olive-removebg-preview.png';
+    const logo = config.brand.logo ? assetUrl(config.brand.logo) : officialLogo;
+    return <Link to="/" className="logo" aria-label={config.brand.name + ' الرئيسية'}>
+        <img src={logo === '/placeholder.svg' ? officialLogo : logo} alt={config.brand.name}
+          onError={event => {
+            const img = event.currentTarget;
+            if (img.getAttribute('src') !== officialLogo) img.src = officialLogo;
+          }}
+          style={{width:"auto",height:"auto",maxHeight:64,maxWidth:190,objectFit:"contain"}}/>
+    </Link>;
+}
 /**
  * Loading policy: only the first visible hero/product-detail image is urgent.
  * On Supabase Pro, setting VITE_HOMEY_IMAGE_TRANSFORMS=true additionally enables
@@ -219,6 +233,7 @@ export function Empty({ text }: {
     text?: string;
 }) { const copy = useCopy(); return <div className="empty"><PackageCheck /><p>{text || copy('emptyProducts', 'لا توجد منتجات منشورة في هذا القسم بعد.')}</p><Link to="/products" className="btn outline">استكشف المنتجات</Link></div>; }
 export function Header() {
+    const hasLocalOrders = useLocalOrders().length > 0;
     const { categories } = useCatalog();
     const { config, preview, error } = useSite();
     const { lines } = useCart();
@@ -267,12 +282,12 @@ export function Header() {
     return <>
         {config.header.announcement && <div className="announcement">{config.header.announcement}</div>}
         <header ref={headerRef} className="store-header">
-            <div className="header-main wrap">
+            <div className={'header-main wrap' + (hasLocalOrders ? ' homey-header-with-orders' : '')}>
                 <button type="button" className="icon-button mobile-menu" aria-label={open ? 'إغلاق القائمة' : 'فتح القائمة'} aria-expanded={open} aria-controls="homey-store-nav" onClick={() => setOpen(current => !current)}>{open ? <X/> : <Menu/>}</button>
                 <Logo/>
                 {config.header.showSearch && <form className="search" action="/products"><Search size={18}/><input name="q" aria-label="ابحث عن منتج" placeholder={latinDigits(config.header.searchPlaceholder)} value={q} onChange={e => setQ(e.target.value)}/></form>}
                 <div className="header-actions">
-                    {config.header.showOrders && <Link to="/orders" className="account-link">طلباتي</Link>}
+                    {(hasLocalOrders || config.header.showOrders) && <Link to="/orders" className={hasLocalOrders ? "account-link homey-local-orders-link" : "account-link"}>طلباتي</Link>}
                     <Link to="/favorites" className="homey-header-favorites" aria-label={`المفضلة، ${favoritesCount} منتجات`}><Heart size={20} aria-hidden="true"/><span className="homey-favorite-label">المفضلة</span>{favoritesCount > 0 && <small className="homey-favorite-count">{favoritesCount}</small>}</Link>
                     <Link to="/cart" search={{ checkout: false, buyNow: '', qty: 1 }} className="cart-link homey-cart-action" aria-label={`سلة التسوق، ${count} ${count === 1 ? 'منتج' : 'منتجات'}`}>
                         <ShoppingCart size={24}/>

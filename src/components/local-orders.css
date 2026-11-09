@@ -1,0 +1,11 @@
+.homey-local-orders { display: grid; gap: 1rem; margin-block: 1rem; }
+.homey-local-orders .summary-line { flex-wrap: wrap; gap: .5rem; }
+.homey-local-orders h2 { margin: 0; font-size: 1.1rem; }
+.store-header .homey-local-orders-link { display: inline-flex; }
+@media (max-width: 767px) {
+  .store-header .header-main.homey-header-with-orders {
+    grid-template-columns: 40px minmax(0, 1fr) max-content !important;
+  }
+  .store-header .header-main > .logo { display: flex; align-items: center; }
+  .store-header .homey-local-orders-link { padding-inline: .25rem; }
+}

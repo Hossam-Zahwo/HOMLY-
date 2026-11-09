@@ -1,11 +1,34 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { supabase, requireConnection } from '@/lib/supabase';
-import { orders, type Order, money, date, statuses, explain } from '@/lib/commerce';
+import { type Order, money, date, statuses, explain } from '@/lib/commerce';
 import { Notice } from '@/components/StoreUI';
+import { useLocalOrders } from '@/lib/local-orders';
 import { useCopy } from '@/lib/site';
 export const Route = createFileRoute('/orders')({ component: MyOrders });
-function MyOrders() { const copy = useCopy(); const [list, setList] = useState<Order[]>([]); const [error, setError] = useState(''); const [email, setEmail] = useState(''); const [message, setMessage] = useState(''); useEffect(() => { requireData(); async function requireData() { try {
+function MyOrders() {
+  const localOrders = useLocalOrders();
+  if (!localOrders.length) return <AccountOrders />;
+  return <div className="wrap page">
+    <h1>طلباتي</h1>
+    <p className="muted">الطلبات اللي عملتها من نفس المتصفح ده، مرتبة من الأحدث.</p>
+    <div className="homey-local-orders">
+      {localOrders.map(order => <article className="panel" key={order.id}>
+        <div className="summary-line">
+          <h2>طلب <bdi>{order.code}</bdi></h2>
+          <time dateTime={order.created_at}>{date(order.created_at)}</time>
+        </div>
+        {order.items.map(item => <div className="summary-line" key={item.id}>
+          <span>{item.title_snapshot} × <bdi>{item.quantity}</bdi></span>
+          <strong>{money(item.line_total_minor)}</strong>
+        </div>)}
+        <div className="summary-line grand"><span>إجمالي الطلب</span><strong>{money(order.total_minor)}</strong></div>
+      </article>)}
+    </div>
+    <Link to="/products" className="text-button">متابعة التسوق</Link>
+  </div>;
+}
+function AccountOrders() { const copy = useCopy(); const [list, setList] = useState<Order[]>([]); const [error, setError] = useState(''); const [email, setEmail] = useState(''); const [message, setMessage] = useState(''); useEffect(() => { requireData(); async function requireData() { try {
     requireConnection();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user)

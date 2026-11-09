@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, Trash2, ShoppingCart, ArrowLeft, ArrowRight, MapPin, Truck, ShieldCheck, X, UserRound, ClipboardCheck } from 'lucide-react';
+import { rememberOrder } from '@/lib/local-orders';
 import { useCart } from '@/lib/cart';
 import { useCatalog, Notice, Picture, Quantity, Loading } from '@/components/StoreUI';
 import { shippingZones, shippingPromotion, effectiveShippingFee, placeOrder, explain, money, imageFor, type Zone, type ShippingPromotion, type Order } from '@/lib/commerce';
@@ -270,6 +271,7 @@ function Cart() {
       try { sessionStorage.setItem('homy-checkout-attempt', JSON.stringify({hash, key: idempotency.current})); } catch {}
       const order = await placeOrder({...body, idempotency_key: idempotency.current});
       try { sessionStorage.removeItem('homy-checkout-attempt'); } catch {}
+      rememberOrder(order);
       setResult(order);
       rememberContact({...form, customer_phone: normalized, governorate: zone.governorate, shipping_zone_id: zone.id}, remember);
       if (!isDirect) cart.clear(); // Direct checkout must never modify the existing shopping cart.
@@ -301,6 +303,7 @@ function Cart() {
     <p>احتفظ برقم طلبك. الدفع عند الاستلام، ولم يتم خصم أي مبلغ إلكترونيًا.</p>
     {whatsappUrl && <a className="btn whatsapp-order" target="_blank" rel="noopener noreferrer" href={whatsappUrl}>تأكيد إضافي على واتساب (اختياري)</a>}
     <p className="muted small">طلبك محفوظ في نظام هومي بالفعل، ومش محتاج تفتح واتساب لإتمامه.</p>
+    <Link to="/orders" className="btn outline">طلباتي</Link>
     <Link to="/products" className="btn outline">متابعة التسوق</Link>
   </div>;
 
