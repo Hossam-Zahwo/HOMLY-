@@ -1,2 +1,5 @@
 [functions.homly-checkout]
 verify_jwt = false
+
+[functions.homly-order-push]
+verify_jwt = false

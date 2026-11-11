@@ -3,18 +3,13 @@
   "framework": "tanstack-start",
   "redirects": [
     {
-      "source": "/cart",
-      "destination": "/emergency/",
-      "permanent": false
-    },
-    {
       "source": "/checkout",
-      "destination": "/emergency/",
+      "destination": "/cart",
       "permanent": false
     },
     {
       "source": "/checkout/:path*",
-      "destination": "/emergency/",
+      "destination": "/cart",
       "permanent": false
     }
   ]

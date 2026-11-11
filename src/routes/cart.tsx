@@ -295,13 +295,13 @@ function Cart() {
   if (result) return <div className="wrap confirmation page">
     <CheckCircle2 size={60}/><h1>{copy('orderThanks')}</h1>
     <p>رقم طلبك <strong dir="ltr">{result.code}</strong></p>
-    <span className="badge">تم تسجيل الطلب — بانتظار التأكيد</span>
+    <span className="badge">استلمنا طلبك</span>
     <div className="panel">{result.items?.map(i => <div className="summary-line" key={i.id}><span>{i.title_snapshot} × {i.quantity}</span><b>{money(i.line_total_minor)}</b></div>)}
       <div className="summary-line"><span>الشحن</span><b>{result.shipping_minor === 0 ? 'مجاني' : money(result.shipping_minor)}</b></div>
       <div className="summary-line grand"><span>الإجمالي المعتمد</span><b>{money(result.total_minor)}</b></div>
     </div>
     <p>احتفظ برقم طلبك. الدفع عند الاستلام، ولم يتم خصم أي مبلغ إلكترونيًا.</p>
-    {whatsappUrl && <a className="btn whatsapp-order" target="_blank" rel="noopener noreferrer" href={whatsappUrl}>تأكيد إضافي على واتساب (اختياري)</a>}
+    {whatsappUrl && <a className="btn whatsapp-order" target="_blank" rel="noopener noreferrer" href={whatsappUrl}>تابع طلبك على واتساب</a>}
     <p className="muted small">طلبك محفوظ في نظام هومي بالفعل، ومش محتاج تفتح واتساب لإتمامه.</p>
     <Link to="/orders" className="btn outline">طلباتي</Link>
     <Link to="/products" className="btn outline">متابعة التسوق</Link>

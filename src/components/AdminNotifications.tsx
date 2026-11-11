@@ -29,9 +29,7 @@ export function AdminNotifications() {
     const previous = useRef(new Set<string>());
     const booted = useRef(false);
     const soundRef = useRef(false);
-    const pushRef = useRef(false);
     useEffect(() => { soundRef.current = sound; }, [sound]);
-    useEffect(() => { pushRef.current = push; }, [push]);
     useEffect(() => { let active = true; let running = false; const refresh = async () => { if (running)
         return; running = true; try {
         let list: Item[];
@@ -56,8 +54,6 @@ export function AdminNotifications() {
                 toast(n.title, { description: n.body, action: { label: 'فتح', onClick: () => location.assign(n.url) } });
                 if (soundRef.current)
                     beep();
-                if (document.visibilityState !== 'visible' && !pushRef.current && 'Notification' in window && Notification.permission === 'granted')
-                    new Notification(n.title, { body: n.body, icon: '/icon-192.png', tag: n.id });
             }
         }
         previous.current = new Set(list.map(n => n.id));
@@ -69,10 +65,9 @@ export function AdminNotifications() {
             clearAppBadge?: () => Promise<void>;
         };
         if (count)
-            void badge.setAppBadge?.(count);
+            void badge.setAppBadge?.(count).catch(() => {});
         else
-            void badge.clearAppBadge?.();
-        setNotice('');
+            void badge.clearAppBadge?.().catch(() => {});
     }
     catch (e) {
         if (active)
@@ -121,10 +116,18 @@ export function AdminNotifications() {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted')
             throw new Error('اسمح بالإشعارات من إعدادات المتصفح.');
-        const reg = await navigator.serviceWorker.ready;
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
         let sub = await reg.pushManager.getSubscription();
+        const applicationServerKey = bytes(config.pushPublicKey);
+        const storedKey = sub?.options.applicationServerKey;
+        const existingKey = storedKey ? new Uint8Array(storedKey) : null;
+        if (sub && existingKey && (existingKey.length !== applicationServerKey.length || !applicationServerKey.every((value, index) => existingKey[index] === value))) {
+            await sub.unsubscribe();
+            sub = null;
+        }
         if (!sub)
-            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytes(config.pushPublicKey) });
+            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
         const { error } = await supabase.rpc('homly_save_push_subscription', { p_subscription: sub.toJSON() });
         if (error)
             throw error;
@@ -137,7 +140,8 @@ export function AdminNotifications() {
     finally {
         setEnabling(false);
     } }}>{push ? 'تجديد تفعيل إشعارات الجهاز' : 'تفعيل إشعارات الجهاز'}</button></div>{push && <button className="text-button" onClick={async () => { try {
-        const reg = await navigator.serviceWorker.ready;
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
         if (sub) {
             const { error } = await supabase.rpc('homly_remove_push_subscription', { p_endpoint: sub.endpoint });
@@ -149,5 +153,5 @@ export function AdminNotifications() {
     }
     catch (e) {
         setNotice(explain(e));
-    } }}>إلغاء إشعارات هذا الجهاز</button>}{notice && <p className="notice small">{notice}</p>}<p className="muted small">الصوت داخل الصفحة يحتاج ضغط تفعيل. الإشعارات عند إغلاق الموقع تحتاج إعداد Web Push على الخادم.</p><div className="notification-items">{items.map(n => <button className={'notification-item ' + (n.is_read ? '' : 'unread')} key={n.id} onClick={() => void mark(n.id)}><b>{n.title}</b><span>{n.body}</span><small>{date(n.created_at)}</small></button>)}{!items.length && <p className="muted">لا توجد إشعارات بعد.</p>}</div></aside>}</div>;
+    } }}>إلغاء إشعارات هذا الجهاز</button>}{notice && <p className="notice small">{notice}</p>}<p className="muted small">ثبّت إدارة هومي من قائمة المتصفح. على الآيفون اختار «أضف إلى الشاشة الرئيسية»، وافتح الأيقونة وفعّل الإشعارات.</p><div className="notification-items">{items.map(n => <button className={'notification-item ' + (n.is_read ? '' : 'unread')} key={n.id} onClick={() => void mark(n.id)}><b>{n.title}</b><span>{n.body}</span><small>{date(n.created_at)}</small></button>)}{!items.length && <p className="muted">لا توجد إشعارات بعد.</p>}</div></aside>}</div>;
 }

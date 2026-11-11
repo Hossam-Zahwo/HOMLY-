@@ -42,7 +42,8 @@ export function AdminPage({ children }: { children: ReactNode }) {
           if (active) setSetupWarning(e instanceof Error ? e.message : 'تعذر إكمال التهيئة');
         });
       } else {
-        void navigate({ to: '/admin/login' });
+        const requestedOrders = window.location.pathname === '/admin/orders';
+        void navigate({ to: '/admin/login', search: requestedOrders ? { orders: true, order: new URLSearchParams(window.location.search).get('order') ?? undefined } : {}, replace: true });
       }
     }).catch(e => {
       if (active) setError(e instanceof Error ? e.message : 'تعذر تجهيز المتجر');
