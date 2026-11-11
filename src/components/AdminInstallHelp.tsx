@@ -1,7 +1,7 @@
 import './AdminInstallHelp.css';
 
-export function AdminInstallHelp() {
-    return <details className="admin-install-help">
+export function AdminInstallHelp({ initiallyOpen = false }: { initiallyOpen?: boolean } = {}) {
+    return <details className="admin-install-help" open={initiallyOpen || undefined}>
         <summary>تثبيت إدارة هومي على الآيفون</summary>
         <ol>
             <li>افتح صفحة إدارة هومي في <strong>Safari</strong>.</li>
