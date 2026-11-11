@@ -228,8 +228,7 @@ function Cart() {
     idempotency.current = '';
   };
 
-  const submit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const submit = async () => {
     if (submitting.current) return;
     setFailure('');
     if (error || loading) return setFailure('تعذر تحميل بيانات السلة. أعد المحاولة.');
@@ -359,7 +358,7 @@ function Cart() {
         </div>
         <div ref={wizardRef} className="homey-checkout-wizard-body" tabIndex={-1}>
           {failure && <div ref={wizardErrorRef} className="homey-wizard-error" role="alert" tabIndex={-1}>{failure}</div>}
-          <form id="checkout-form" noValidate onSubmit={e => { e.preventDefault(); if (wizardStep < 2) nextWizardStep(); else void submit(e); }}>
+          <form id="checkout-form" noValidate onSubmit={e => { e.preventDefault(); if (wizardStep < 2) nextWizardStep(); }}>
             {wizardStep === 0 && <div className="homey-wizard-fields">
               {isDirect && <div className="homey-direct-product" role="group" aria-label="تفاصيل المنتج المطلوب الآن">
                 <Picture src={rows[0]?.p ? imageFor(rows[0].p, rows[0].v) : undefined} alt={rows[0]?.v?.title_override || rows[0]?.p?.title_ar || 'المنتج المطلوب'}/>
@@ -401,7 +400,7 @@ function Cart() {
         </div>
         <div className="homey-wizard-actions">
           {wizardStep === 0 ? <button type="button" className="btn outline homey-wizard-secondary" disabled={busy} onClick={closeWizard}>رجوع للسلة</button> : <button type="button" className="btn outline homey-wizard-secondary" disabled={busy} onClick={() => { setFailure(''); setWizardStep(s => s - 1); }}><ArrowRight size={16}/> السابق</button>}
-          {wizardStep < 2 ? <button type="button" className="btn homey-wizard-next" disabled={busy || invalid} onClick={nextWizardStep}>التالي <ArrowLeft size={18}/></button> : <button type="submit" form="checkout-form" className="btn homey-wizard-next" disabled={busy || invalid || !!error || !!shippingError}>{busy ? 'بنحفظ طلبك...' : `تأكيد الطلب — ${money(subtotal + fee)}`}{!busy && <CheckCircle2 size={18}/>}</button>}
+          {wizardStep < 2 ? <button key="next-step" type="button" className="btn homey-wizard-next" disabled={busy || invalid} onClick={event => { event.preventDefault(); nextWizardStep(); }}>التالي <ArrowLeft size={18}/></button> : <button key="confirm-order" type="button" onClick={() => void submit()} className="btn homey-wizard-next" disabled={busy || invalid || !!error || !!shippingError}>{busy ? 'بنحفظ طلبك...' : `تأكيد الطلب — ${money(subtotal + fee)}`}{!busy && <CheckCircle2 size={18}/>}</button>}
         </div>
         <p className="homey-wizard-footer-note">{wizardStep + 1} من 3 · تقدر ترجع وتغيّر بياناتك في أي وقت قبل التأكيد.</p>
       </div>
