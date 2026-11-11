@@ -13,7 +13,19 @@ type Item = {
     is_read: boolean;
 };
 let audio: AudioContext | null = null;
-let soundEnabled = false;
+let soundEnabled = true;
+const soundPreference = 'homey-admin-notification-sound';
+const sounded = new Set<string>();
+async function unlockSound() {
+    audio ??= new AudioContext();
+    if (audio.state !== 'running') await audio.resume();
+}
+function soundFor(id: string) {
+    if (!soundEnabled || !audio || audio.state !== 'running' || sounded.has(id)) return;
+    if (sounded.size >= 200) sounded.clear();
+    sounded.add(id);
+    beep();
+}
 function beep() { if (!audio || audio.state !== 'running')
     return; const o = audio.createOscillator(); const g = audio.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(760, audio.currentTime); o.frequency.exponentialRampToValueAtTime(1050, audio.currentTime + .15); g.gain.setValueAtTime(.0001, audio.currentTime); g.gain.exponentialRampToValueAtTime(.12, audio.currentTime + .02); g.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + .35); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + .36); }
 function bytes(key: string) { const raw = atob(key.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - key.length % 4) % 4)); return Uint8Array.from(raw, c => c.charCodeAt(0)); }
@@ -22,14 +34,27 @@ export function AdminNotifications() {
     const [items, setItems] = useState<Item[]>([]);
     const [unread, setUnread] = useState(0);
     const [open, setOpen] = useState(false);
-    const [sound, setSound] = useState(soundEnabled);
+    const [sound, setSound] = useState(false);
     const [push, setPush] = useState(false);
     const [notice, setNotice] = useState('');
     const [enabling, setEnabling] = useState(false);
     const previous = useRef(new Set<string>());
     const booted = useRef(false);
-    const soundRef = useRef(false);
-    useEffect(() => { soundRef.current = sound; }, [sound]);
+    const registration = useRef<ServiceWorkerRegistration | null>(null);
+    const subscription = useRef<PushSubscription | null>(null);
+    useEffect(() => {
+        try { soundEnabled = localStorage.getItem(soundPreference) !== 'off'; } catch {}
+        setSound(soundEnabled && audio?.state === 'running');
+        const unlock = () => {
+            if (soundEnabled) void unlockSound().then(() => setSound(soundEnabled)).catch(() => {});
+        };
+        window.addEventListener('click', unlock, true);
+        window.addEventListener('keydown', unlock, true);
+        return () => {
+            window.removeEventListener('click', unlock, true);
+            window.removeEventListener('keydown', unlock, true);
+        };
+    }, []);
     useEffect(() => { let active = true; let running = false; const refresh = async () => { if (running)
         return; running = true; try {
         let list: Item[];
@@ -48,12 +73,11 @@ export function AdminNotifications() {
                 if (previous.current.has(n.id) || n.is_read)
                     continue;
                 const key = 'homy-alert-' + n.id;
+                soundFor(n.id);
                 if (localStorage.getItem(key))
                     continue;
                 localStorage.setItem(key, '1');
                 toast(n.title, { description: n.body, action: { label: 'فتح', onClick: () => location.assign(n.url) } });
-                if (soundRef.current)
-                    beep();
             }
         }
         previous.current = new Set(list.map(n => n.id));
@@ -75,11 +99,24 @@ export function AdminNotifications() {
     }
     finally {
         running = false;
-    } }; void refresh(); const timer = setInterval(() => void refresh(), 20000); const listener = () => void refresh(); window.addEventListener('storage', listener); window.addEventListener('homy-notifications-changed', listener); window.addEventListener('focus', listener); const channel = supabase.channel('homy-admin-alerts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'homly_admin_notifications' }, listener).subscribe(); if ('serviceWorker' in navigator) {
-        void navigator.serviceWorker.register('/sw.js').then(async (registration) => { const sub = await registration.pushManager?.getSubscription(); if (active)
-            setPush(!!sub); }).catch(() => { });
-        navigator.serviceWorker.addEventListener('message', listener);
-    } return () => { active = false; clearInterval(timer); window.removeEventListener('storage', listener); window.removeEventListener('homy-notifications-changed', listener); window.removeEventListener('focus', listener); navigator.serviceWorker?.removeEventListener('message', listener); if (channel)
+    } };
+    const onPush = (event: MessageEvent) => {
+        if (event.data?.type !== 'homy-notification') return;
+        if (typeof event.data.id === 'string') soundFor(event.data.id);
+        void refresh();
+    };
+    void refresh(); const timer = setInterval(() => void refresh(), 20000); const listener = () => void refresh(); window.addEventListener('storage', listener); window.addEventListener('homy-notifications-changed', listener); window.addEventListener('focus', listener); const channel = supabase.channel('homy-admin-alerts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'homly_admin_notifications' }, listener).subscribe(); if ('serviceWorker' in navigator) {
+        void navigator.serviceWorker.register('/sw.js').then(() => navigator.serviceWorker.ready).then(async reg => {
+            if (!active) return;
+            registration.current = reg;
+            const sub = await reg.pushManager?.getSubscription();
+            if (!active || !sub || Notification.permission !== 'granted') return;
+            subscription.current = sub;
+            const { error } = await supabase.rpc('homly_save_push_subscription', { p_subscription: sub.toJSON() });
+            if (active && !error) setPush(true);
+        }).catch(() => {});
+        navigator.serviceWorker.addEventListener('message', onPush);
+    } return () => { active = false; clearInterval(timer); window.removeEventListener('storage', listener); window.removeEventListener('homy-notifications-changed', listener); window.removeEventListener('focus', listener); navigator.serviceWorker?.removeEventListener('message', onPush); if (channel)
         void supabase.removeChannel(channel); }; }, []);
     const mark = async (id?: string) => { try {
         {
@@ -98,39 +135,41 @@ export function AdminNotifications() {
         setNotice(explain(e));
     } };
     return <div className="admin-notification-wrap"><button className="icon-button notification-bell" aria-label={'الإشعارات غير المقروءة ' + unread} aria-expanded={open} onClick={() => setOpen(!open)}><Bell size={21}/>{unread > 0 && <span>{unread > 99 ? '99+' : unread}</span>}</button>{open && <aside className="notification-dropdown"><div className="section-head"><h3>الإشعارات</h3><button className="text-button" onClick={() => void mark()}><CheckCheck size={16}/>قراءة الكل</button></div><div className="button-row"><button className="btn compact outline" onClick={async () => { try {
-        if (!audio)
-            audio = new AudioContext();
-        await audio.resume();
-        soundEnabled = !sound;
-        setSound(soundEnabled);
-        if (soundEnabled)
+        const enable = !sound;
+        soundEnabled = enable;
+        try { localStorage.setItem(soundPreference, enable ? 'on' : 'off'); } catch {}
+        if (enable) {
+            await unlockSound();
             beep();
+        }
+        setSound(enable);
     }
     catch {
         setNotice('المتصفح لم يسمح بتشغيل الصوت. جرّب الضغط مرة أخرى.');
-    } }}>{sound ? <Volume2 size={15}/> : <VolumeX size={15}/>} {sound ? 'إيقاف الصوت' : 'تفعيل الصوت'}</button><button className="btn compact" disabled={enabling} onClick={async () => { setEnabling(true); setNotice(''); try {
+    } }}>{sound ? <Volume2 size={15}/> : <VolumeX size={15}/>} {sound ? 'إيقاف الصوت' : 'تفعيل الصوت'}</button>{sound && <button type="button" className="text-button" onClick={() => {
+        void unlockSound().then(beep).catch(() => setNotice('المتصفح لم يسمح بتشغيل الصوت.'));
+    }}>اختبار الصوت</button>}<button className="btn compact" disabled={enabling} onClick={async () => { setEnabling(true); setNotice(''); try {
         if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window))
-            throw new Error('الإشعارات الخلفية غير مدعومة هنا. على الآيفون افتح الموقع من أيقونة أضف إلى الشاشة الرئيسية.');
-        if (!config.pushPublicKey)
-            throw new Error('أضف مفتاح VAPID العام من إعدادات الإشعارات في الإدارة أولًا.');
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted')
-            throw new Error('اسمح بالإشعارات من إعدادات المتصفح.');
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        await navigator.serviceWorker.ready;
-        let sub = await reg.pushManager.getSubscription();
+            throw new Error('على الآيفون ثبّت إدارة هومي على الشاشة الرئيسية وافتحها من الأيقونة لتفعيل الإشعارات.');
+        if (Notification.permission === 'denied')
+            throw new Error('الإشعارات مقفولة. اسمح بها لإدارة هومي من إعدادات الجهاز أو المتصفح.');
+        if (!config.pushPublicKey || !registration.current)
+            throw new Error('الإشعارات لسه بتتجهز. انتظر لحظات واضغط تفعيل مرة تانية.');
+        const reg = registration.current;
         const applicationServerKey = bytes(config.pushPublicKey);
+        let sub = subscription.current;
         const storedKey = sub?.options.applicationServerKey;
         const existingKey = storedKey ? new Uint8Array(storedKey) : null;
         if (sub && existingKey && (existingKey.length !== applicationServerKey.length || !applicationServerKey.every((value, index) => existingKey[index] === value))) {
             await sub.unsubscribe();
-            sub = null;
+            subscription.current = null;
+            throw new Error('تم تحديث إعداد الإشعارات. اضغط تفعيل مرة تانية لتسجيل الجهاز.');
         }
-        if (!sub)
-            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+        // Start subscribe inside the click, while iOS still has user activation.
+        sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+        subscription.current = sub;
         const { error } = await supabase.rpc('homly_save_push_subscription', { p_subscription: sub.toJSON() });
-        if (error)
-            throw error;
+        if (error) throw error;
         setPush(true);
         toast.success('تم تسجيل الجهاز للإشعارات الخلفية');
     }
@@ -148,6 +187,7 @@ export function AdminNotifications() {
             if (error)
                 throw error;
             await sub.unsubscribe();
+            subscription.current = null;
         }
         setPush(false);
     }

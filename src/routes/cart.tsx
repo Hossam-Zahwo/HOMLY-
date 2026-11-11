@@ -285,16 +285,20 @@ function Cart() {
       setResult(order);
       rememberContact({...form, customer_phone: normalized, governorate: zone.governorate, shipping_zone_id: zone.id}, remember);
       if (!isDirect) cart.clear(); // Direct checkout must never modify the existing shopping cart.
-      // Saved order is confirmed by the database. WhatsApp/settings failures must never reverse this success.
+      // Open WhatsApp only after the checkout RPC returned a saved order.
       let settings = config.whatsapp;
-      let settingsTimer: ReturnType<typeof setTimeout> | undefined;
-      try {
-        settings = (await Promise.race([loadSite(false), new Promise<never>((_, reject) => { settingsTimer = setTimeout(() => reject(new Error('timeout')), 5000); })])).config.whatsapp;
-      } catch {} finally { clearTimeout(settingsTimer); }
+      if (!settings.number) {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          settings = (await Promise.race([
+            loadSite(false),
+            new Promise<never>((_, reject) => { timer = setTimeout(reject, 3000); }),
+          ])).config.whatsapp;
+        } catch {} finally { clearTimeout(timer); }
+      }
       const link = orderWhatsAppUrl(settings, order);
       setWhatsappUrl(link);
-      // The database order is already completed; WhatsApp is optional support,
-      // never the checkout processor or a forced extra step.
+      if (link) window.location.assign(link);
     } catch (err) {
       setFailure(explain(err));
     } finally { submitting.current = false; setBusy(false); }
@@ -311,7 +315,7 @@ function Cart() {
     </div>
     <p>احتفظ برقم طلبك. الدفع عند الاستلام، ولم يتم خصم أي مبلغ إلكترونيًا.</p>
     {whatsappUrl && <a className="btn whatsapp-order" target="_blank" rel="noopener noreferrer" href={whatsappUrl}>تابع طلبك على واتساب</a>}
-    <p className="muted small">طلبك محفوظ في نظام هومي بالفعل، ومش محتاج تفتح واتساب لإتمامه.</p>
+    <p className="muted small">طلبك محفوظ في هومي. لو واتساب ما فتحش تلقائيًا، استخدم الزر اللي فوق.</p>
     <Link to="/orders" className="btn outline">طلباتي</Link>
     <Link to="/products" className="btn outline">متابعة التسوق</Link>
   </div>;
@@ -394,7 +398,7 @@ function Cart() {
               </div>
               <label htmlFor="homey-notes">ملاحظات للمندوب (اختياري)<textarea id="homey-notes" rows={2} placeholder="مثال: اتصل قبل الوصول" value={form.customer_notes} onChange={e => changeField('customer_notes', e.target.value)}/></label>
               <label className="check-label homey-wizard-remember"><input type="checkbox" checked={remember} onChange={e => { setRemember(e.target.checked); if (!e.target.checked) rememberContact(form, false); }}/>افتكر بياناتي على الجهاز ده للطلب الجاي</label>
-              <div className="checkout-payment-note"><ShieldCheck size={21}/><span><b>الدفع عند الاستلام</b><small>طلبك هيتسجل لما تضغط تأكيد. بعد كده تقدر تتابعه على واتساب.</small></span></div>
+              <div className="checkout-payment-note"><ShieldCheck size={21}/><span><b>الدفع عند الاستلام</b><small>بعد تسجيل طلبك هنفتح لك واتساب برسالة جاهزة للإرسال.</small></span></div>
             </div>}
           </form>
         </div>

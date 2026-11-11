@@ -21,6 +21,7 @@ self.addEventListener('push', event => {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       tag: data.id,
+      silent: false,
       data: { url: adminTarget(data.url).href },
     });
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
