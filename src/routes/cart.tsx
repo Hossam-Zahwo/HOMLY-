@@ -6,7 +6,7 @@ import { CheckCircle2, Trash2, ShoppingCart, ArrowLeft, ArrowRight, MapPin, Truc
 import { rememberOrder } from '@/lib/local-orders';
 import { useCart } from '@/lib/cart';
 import { useCatalog, Notice, Picture, Quantity, Loading } from '@/components/StoreUI';
-import { shippingZones, shippingPromotion, effectiveShippingFee, placeOrder, explain, money, imageFor, type Zone, type ShippingPromotion, type Order } from '@/lib/commerce';
+import { shippingZones, shippingPromotion, checkoutVariantPrices, effectiveShippingFee, placeOrder, explain, money, imageFor, type Zone, type ShippingPromotion, type Order } from '@/lib/commerce';
 import { EGYPT_GOVERNORATES } from '@/lib/shipping-governorates';
 import { useSite, useCopy, loadSite } from '@/lib/site';
 import { whatsappHref } from '@/lib/content-model';
@@ -29,7 +29,7 @@ function Cart() {
   const isDirect = Boolean(search.buyNow);
   const [directQty, setDirectQty] = useState(search.qty);
   const orderLines = isDirect ? [{ variantId: search.buyNow, quantity: directQty }] : cart.lines;
-  const { products, loading, error, reload } = useCatalog();
+  const { products, loading, error, reload } = useCatalog(false, true);
   const [zones, setZones] = useState<Zone[]>([]);
   const [promotion, setPromotion] = useState<ShippingPromotion | null>(null);
   const [governorate, setGovernorate] = useState('');
@@ -250,13 +250,24 @@ function Cart() {
     try {
       // Re-check the server quote just before creating the order. The promo may have expired
       // while the customer was filling the form; never silently increase checkout total.
-      const [freshZones, freshPromotion] = await Promise.all([shippingZones(), shippingPromotion()]);
+      const [freshZones, freshPromotion, freshVariants] = await Promise.all([
+        shippingZones(), shippingPromotion(), checkoutVariantPrices(orderLines.map(line => line.variantId)),
+      ]);
       setZones(freshZones);
       setPromotion(freshPromotion);
       const currentZone = freshZones.find(z => z.id === zoneId && z.governorate === governorate);
       if (!currentZone) throw new Error('منطقة التوصيل اتغيّرت. اختارها تاني قبل التأكيد.');
       if (effectiveShippingFee(currentZone, freshPromotion) !== fee) {
         throw new Error('تكلفة الشحن اتغيرت أثناء كتابة البيانات. راجع الإجمالي الظاهر واضغط تأكيد تاني.');
+      }
+      const changed = rows.some(line => {
+        const fresh = freshVariants.get(line.variantId);
+        return !fresh || fresh.price_minor !== line.v?.price_minor
+          || fresh.stock_on_hand - fresh.stock_reserved < line.quantity;
+      });
+      if (changed) {
+        reload();
+        throw new Error('السعر أو الكمية المتاحة اتغيّروا. راجع السلة واضغط تأكيد تاني.');
       }
       const body = {
         ...form, customer_name: form.customer_name.trim(), area: form.area.trim(), address: form.address.trim(),

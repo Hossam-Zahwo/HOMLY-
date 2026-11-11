@@ -184,6 +184,17 @@ export async function catalog(admin=false):Promise<Catalog>{
    return emergencyCatalog();
  }
 }
+export async function checkoutCatalog(): Promise<Catalog> {
+  return recoverLiveCatalogMedia(await databaseCatalog(false));
+}
+
+export async function checkoutVariantPrices(ids: string[]) {
+  const { data, error } = await supabase.from('homly_product_variants')
+    .select('id,price_minor,stock_on_hand,stock_reserved').eq('status', 'published').in('id', ids);
+  check(error);
+  return new Map((data || []).map(variant => [variant.id, variant]));
+}
+
 async function emergencyCatalog():Promise<Catalog>{
    probeLegacyImageAvailability();
    // The original Supabase project is 402-restricted. Public storefront only:

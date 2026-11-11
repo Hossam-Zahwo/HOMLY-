@@ -3,7 +3,7 @@ import homeyWordmark from '/homey-wordmark.svg?raw';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus, Zap, Heart } from 'lucide-react';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
-import { catalog, explain, money, imageFor, assetUrl, availableStock, type Catalog, type Product, type Variant } from '@/lib/commerce';
+import { catalog, checkoutCatalog, explain, money, imageFor, assetUrl, availableStock, type Catalog, type Product, type Variant } from '@/lib/commerce';
 import { useLocalOrders } from '@/lib/local-orders';
 import { useCart } from '@/lib/cart';
 import {useFavorites} from '@/lib/favorites';
@@ -155,7 +155,7 @@ function sharedCatalog(admin: boolean): Promise<Catalog> {
     publicCatalogCache = {at: Date.now(), promise};
     return promise;
 }
-export function useCatalog(admin = false) {
+export function useCatalog(admin = false, checkout = false) {
     const [data, setData] = useState<Catalog>({products: [], categories: []});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -196,7 +196,7 @@ export function useCatalog(admin = false) {
                 setError('التحميل اتأخر بسبب الاتصال. جرّب إعادة المحاولة.');
             }
         }, 13000);
-        sharedCatalog(admin).then(d => {
+        (checkout ? checkoutCatalog() : sharedCatalog(admin)).then(d => {
             if (!live) return;
             setData(d);
             hasLoadedOnce.current = true;
@@ -213,7 +213,7 @@ export function useCatalog(admin = false) {
             live = false;
             window.clearTimeout(safety);
         };
-    }, [admin, version]);
+    }, [admin, checkout, version]);
 
     return {...data, loading, error, reload: () => {
         publicCatalogCache = null;
