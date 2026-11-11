@@ -5,6 +5,17 @@ function isAdminPath(path) {
   return path === '/admin' || path.startsWith('/admin/');
 }
 
+self.addEventListener('fetch', event => {
+  if (event.request.mode !== 'navigate') return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin || !isAdminPath(url.pathname)) return;
+
+  event.respondWith(fetch(event.request).catch(() => new Response(
+    'الاتصال بالإنترنت غير متاح. اتصل بالإنترنت وافتح إدارة هومي مرة تانية.',
+    { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+  )));
+});
+
 function adminTarget(path) {
   const url = new URL(path || '/admin/orders', self.location.origin);
   return url.origin === self.location.origin && isAdminPath(url.pathname)
