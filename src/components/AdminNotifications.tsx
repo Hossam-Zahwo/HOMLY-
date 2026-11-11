@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useSite } from '@/lib/site';
 import { explain, date } from '@/lib/commerce';
 import { toast } from 'sonner';
+import { AdminInstallHelp } from './AdminInstallHelp';
 type Item = {
     id: string;
     title: string;
@@ -26,8 +27,28 @@ function soundFor(id: string) {
     sounded.add(id);
     beep();
 }
-function beep() { if (!audio || audio.state !== 'running')
-    return; const o = audio.createOscillator(); const g = audio.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(760, audio.currentTime); o.frequency.exponentialRampToValueAtTime(1050, audio.currentTime + .15); g.gain.setValueAtTime(.0001, audio.currentTime); g.gain.exponentialRampToValueAtTime(.12, audio.currentTime + .02); g.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + .35); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + .36); }
+function beep() {
+    const context = audio;
+    if (!context || context.state !== 'running') return;
+
+    const start = context.currentTime;
+    const notes = [880, 1175, 1568];
+    for (const [index, frequency] of notes.entries()) {
+        const time = start + index * 0.21;
+        const oscillator = context.createOscillator();
+        const volume = context.createGain();
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(frequency, time);
+        volume.gain.setValueAtTime(0.0001, time);
+        volume.gain.exponentialRampToValueAtTime(0.56, time + 0.012);
+        volume.gain.setValueAtTime(0.56, time + 0.09);
+        volume.gain.exponentialRampToValueAtTime(0.0001, time + 0.19);
+        oscillator.connect(volume);
+        volume.connect(context.destination);
+        oscillator.start(time);
+        oscillator.stop(time + 0.2);
+    }
+}
 function bytes(key: string) { const raw = atob(key.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - key.length % 4) % 4)); return Uint8Array.from(raw, c => c.charCodeAt(0)); }
 export function AdminNotifications() {
     const { config } = useSite();
@@ -193,5 +214,19 @@ export function AdminNotifications() {
     }
     catch (e) {
         setNotice(explain(e));
-    } }}>إلغاء إشعارات هذا الجهاز</button>}{notice && <p className="notice small">{notice}</p>}<p className="muted small">ثبّت إدارة هومي من قائمة المتصفح. على الآيفون اختار «أضف إلى الشاشة الرئيسية»، وافتح الأيقونة وفعّل الإشعارات.</p><div className="notification-items">{items.map(n => <button className={'notification-item ' + (n.is_read ? '' : 'unread')} key={n.id} onClick={() => void mark(n.id)}><b>{n.title}</b><span>{n.body}</span><small>{date(n.created_at)}</small></button>)}{!items.length && <p className="muted">لا توجد إشعارات بعد.</p>}</div></aside>}</div>;
+    } }}>إلغاء إشعارات هذا الجهاز</button>}{notice && <p className="notice small">{notice}</p>}{push && <button type="button" className="text-button" onClick={async () => {
+        try {
+            const reg = registration.current;
+            if (!reg || Notification.permission !== 'granted') throw new Error('فعّل إشعارات الجهاز الأول.');
+            await reg.showNotification('اختبار إشعار إدارة هومي', {
+                body: 'ده اختبار لإشعارات الجهاز.',
+                icon: '/icon-192.png',
+                tag: 'homey-admin-test',
+                silent: false,
+                data: { url: new URL('/admin/orders', location.origin).href },
+            });
+        } catch (e) {
+            setNotice(explain(e));
+        }
+    }}>اختبار إشعار الجهاز</button>}<AdminInstallHelp/><p className="muted small">على أندرويد، صوت الإشعار واللوحة مقفولة بيتحدد من إعدادات إشعارات إدارة هومي أو Chrome وصوت الإشعارات في الجهاز.</p><div className="notification-items">{items.map(n => <button className={'notification-item ' + (n.is_read ? '' : 'unread')} key={n.id} onClick={() => void mark(n.id)}><b>{n.title}</b><span>{n.body}</span><small>{date(n.created_at)}</small></button>)}{!items.length && <p className="muted">لا توجد إشعارات بعد.</p>}</div></aside>}</div>;
 }
