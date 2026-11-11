@@ -306,7 +306,6 @@ function Cart() {
   if (result) return <div className="wrap confirmation page">
     <CheckCircle2 size={60}/><h1>{copy('orderThanks')}</h1>
     <p>رقم طلبك <strong dir="ltr">{result.code}</strong></p>
-    <span className="badge">استلمنا طلبك</span>
     <div className="panel">{result.items?.map(i => <div className="summary-line" key={i.id}><span>{i.title_snapshot} × {i.quantity}</span><b>{money(i.line_total_minor)}</b></div>)}
       <div className="summary-line"><span>الشحن</span><b>{result.shipping_minor === 0 ? 'مجاني' : money(result.shipping_minor)}</b></div>
       <div className="summary-line grand"><span>الإجمالي المعتمد</span><b>{money(result.total_minor)}</b></div>
@@ -396,7 +395,7 @@ function Cart() {
               </div>
               <label htmlFor="homey-notes">ملاحظات للمندوب (اختياري)<textarea id="homey-notes" rows={2} placeholder="مثال: اتصل قبل الوصول" value={form.customer_notes} onChange={e => changeField('customer_notes', e.target.value)}/></label>
               <label className="check-label homey-wizard-remember"><input type="checkbox" checked={remember} onChange={e => { setRemember(e.target.checked); if (!e.target.checked) rememberContact(form, false); }}/>افتكر بياناتي على الجهاز ده للطلب الجاي</label>
-              <div className="checkout-payment-note"><ShieldCheck size={21}/><span><b>الدفع عند الاستلام</b><small>طلبك هيتسجل في المتجر، وبعدها تقدر تأكده على واتساب.</small></span></div>
+              <div className="checkout-payment-note"><ShieldCheck size={21}/><span><b>الدفع عند الاستلام</b><small>طلبك هيتسجل لما تضغط تأكيد. بعد كده تقدر تتابعه على واتساب.</small></span></div>
             </div>}
           </form>
         </div>
