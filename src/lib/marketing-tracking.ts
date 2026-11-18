@@ -4,16 +4,15 @@ type TrackingWindow = Window & {gtag?: (...args:any[])=>void; fbq?: (...args:any
 const pixelId = import.meta.env.VITE_META_PIXEL_ID?.trim();
 const enabled = import.meta.env.VITE_MARKETING_TRACKING_ENABLED === 'true';
 const consentKey='homey-marketing-consent';
-const hasConsent=()=>typeof window!=='undefined' && window.localStorage.getItem(consentKey)==='granted';
+const hasConsent=()=>{try{return typeof window!=='undefined'&&window.localStorage.getItem(consentKey)==='granted'}catch{return false}};
 export function setMarketingConsent(allowed:boolean){
  if(typeof window==='undefined')return;
- window.localStorage.setItem(consentKey,allowed?'granted':'denied');
+ try{window.localStorage.setItem(consentKey,allowed?'granted':'denied')}catch{return;}
  if(allowed){initializeGoogleAnalytics();initializeMetaPixel();trackNavigation();}
 }
 export function marketingConsent(): 'granted'|'denied'|'unset' {
  if(typeof window==='undefined')return 'unset';
- const value=window.localStorage.getItem(consentKey);
- return value==='granted'||value==='denied'?value:'unset';
+ try{const value=window.localStorage.getItem(consentKey);return value==='granted'||value==='denied'?value:'unset'}catch{return 'unset'}
 }
 const currency = 'EGP';
 const measurementId='G-C4D2XGGQVP';
