@@ -43,6 +43,8 @@ export type Variant = {
     description_override: string | null;
     price_minor: number;
     compare_at_minor: number | null;
+    discount_starts_at: string | null;
+    discount_ends_at: string | null;
     stock_on_hand: number;
     stock_reserved: number;
     status: string;
@@ -151,7 +153,7 @@ function check(error: any) { if (error)
 const publicColumns: Record<string, string> = {
     homly_products: 'id,title_ar,description,specifications,kind,display_mode,status,deleted_at,created_at',
     homly_categories: 'id,name_ar,slug,image_path,sort_order,is_active,deleted_at',
-    homly_product_variants: 'id,product_id,sku,slug,title_override,description_override,price_minor,compare_at_minor,stock_on_hand,stock_reserved,status,is_listed,combination_key,sort_order',
+    homly_product_variants: 'id,product_id,sku,slug,title_override,description_override,price_minor,compare_at_minor,discount_starts_at,discount_ends_at,stock_on_hand,stock_reserved,status,is_listed,combination_key,sort_order',
     homly_product_images: 'product_id,variant_id,storage_path,sort_order',
     homly_product_categories: 'product_id,category_id',
     homly_product_options: 'id,name_ar',
@@ -190,7 +192,7 @@ export async function checkoutCatalog(): Promise<Catalog> {
 
 export async function checkoutVariantPrices(ids: string[]) {
   const { data, error } = await supabase.from('homly_product_variants')
-    .select('id,price_minor,stock_on_hand,stock_reserved').eq('status', 'published').in('id', ids);
+    .select('id,price_minor,compare_at_minor,discount_starts_at,discount_ends_at,stock_on_hand,stock_reserved').eq('status', 'published').in('id', ids);
   check(error);
   return new Map((data || []).map(variant => [variant.id, variant]));
 }
@@ -279,6 +281,19 @@ export function assetUrl(path: string | null) {
  return oldReady ? supabase.storage.from('homly-products').getPublicUrl(source).data.publicUrl : '/placeholder.svg';
 }
 export const availableStock = (v: Variant) => Math.max(0, Number(v.stock_on_hand || 0) - Number(v.stock_reserved || 0));
+type DiscountPrice = Pick<Variant, 'price_minor' | 'compare_at_minor' | 'discount_starts_at' | 'discount_ends_at'>;
+export function hasActiveDiscount(v: DiscountPrice, now = Date.now()) {
+ const sale = Number(v.price_minor || 0), regular = Number(v.compare_at_minor || 0);
+ if (!(regular > sale)) return false;
+ const startsAt = v.discount_starts_at ? Date.parse(v.discount_starts_at) : null;
+ const endsAt = v.discount_ends_at ? Date.parse(v.discount_ends_at) : null;
+ if (startsAt !== null && Number.isFinite(startsAt) && now < startsAt) return false;
+ if (endsAt !== null && Number.isFinite(endsAt) && now >= endsAt) return false;
+ return true;
+}
+export function effectivePrice(v: DiscountPrice, now = Date.now()) {
+ return hasActiveDiscount(v, now) ? Number(v.price_minor) : Number(v.compare_at_minor && v.compare_at_minor > v.price_minor ? v.compare_at_minor : v.price_minor);
+}
 export function cards(products: Product[]) {
  const rows = products.flatMap(p => {
   const vs = p.variants.filter(v => v.status === 'published');
@@ -286,7 +301,7 @@ export function cards(products: Product[]) {
   // For grouped products, show an in-stock variant whenever one exists.
   const selected = p.display_mode === 'separate_variants'
    ? vs.filter(v => v.is_listed)
-   : [...vs].sort((a,b) => Number(availableStock(b)>0)-Number(availableStock(a)>0) || a.price_minor-b.price_minor).slice(0,1);
+   : [...vs].sort((a,b) => Number(availableStock(b)>0)-Number(availableStock(a)>0) || effectivePrice(a)-effectivePrice(b)).slice(0,1);
   return selected.map(v => ({p,v}));
  });
  return rows.sort((a,b) => Number(availableStock(b.v)>0)-Number(availableStock(a.v)>0));

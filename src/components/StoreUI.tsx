@@ -3,7 +3,7 @@ import homeyWordmark from '/homey-wordmark.svg?raw';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Menu, ShoppingCart, Search, X, ArrowLeft, Truck, ShieldCheck, PackageCheck, Minus, Plus, Zap, Heart } from 'lucide-react';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
-import { catalog, checkoutCatalog, explain, money, imageFor, assetUrl, availableStock, type Catalog, type Product, type Variant } from '@/lib/commerce';
+import { catalog, checkoutCatalog, explain, money, imageFor, assetUrl, availableStock, effectivePrice, hasActiveDiscount, type Catalog, type Product, type Variant } from '@/lib/commerce';
 import { useLocalOrders } from '@/lib/local-orders';
 import { useCart } from '@/lib/cart';
 import {useFavorites} from '@/lib/favorites';
@@ -333,7 +333,7 @@ export function ProductCard({ p, v, priority = false }: {
     const stock = availableStock(v);
     const title = latinDigits(v.title_override || p.title_ar);
     const options = latinDigits(Object.values(v.options).filter(Boolean).join(' / '));
-    const hasDiscount = Boolean(v.compare_at_minor && v.compare_at_minor > v.price_minor);
+    const hasDiscount = hasActiveDiscount(v); const displayPrice = effectivePrice(v);
     return <article className="product-card">
         <div className="homey-product-media">
         <Link to="/product/$slug" params={{ slug: v.slug }} className="product-photo" aria-label={title}>
@@ -352,7 +352,7 @@ export function ProductCard({ p, v, priority = false }: {
             </Link>
             <p className="muted options-copy" title={options || undefined} aria-hidden={!options}>{options || '\u00a0'}</p>
             <div className="price-row">
-                <strong>{money(v.price_minor)}</strong>
+                <strong>{money(displayPrice)}</strong>
                 {hasDiscount && v.compare_at_minor ? <del>{money(v.compare_at_minor)}</del> : null}
             </div>
             <div className="homey-card-actions">
