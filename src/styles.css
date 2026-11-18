@@ -1702,3 +1702,36 @@ html { scroll-padding-top: calc(var(--homey-header-height, 110px) + 14px); }
     max-width:27ch;
   }
 }
+
+/* HOMEY product page mobile summary, related items and limited offer timer */
+.discount-countdown{display:inline-flex;align-items:center;gap:5px;border-radius:999px;background:#f1f6ec;color:#526b3d;padding:7px 11px;font-size:12px;font-weight:700}
+.discount-countdown b{font-weight:600}
+.homey-discount-window{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fafaf7}
+.homey-discount-window>strong{display:block;margin-bottom:4px}
+.homey-discount-window p{margin:0 0 12px}
+.homey-discount-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.homey-discount-dates label{display:grid;gap:6px}
+.product-summary-toggle{display:none}
+@media(max-width:767px){
+ .product-page{padding-top:12px}
+ .product-page .breadcrumb{font-size:11px;margin-bottom:12px}
+ .product-detail{grid-template-columns:1fr;gap:12px}
+ .gallery-main{aspect-ratio:1.08;border-radius:10px}
+ .thumbnails{gap:7px;margin-top:8px}
+ .thumbnails button{width:58px;min-width:58px;height:58px}
+ .product-info h1{font-size:22px;line-height:1.45;margin:5px 0}
+ .product-info .eyebrow{font-size:10px}
+ .product-info .homey-detail-favorite{padding:5px 0}
+ .detail-price{gap:9px;margin-block:9px;align-items:center;flex-wrap:wrap}
+ .detail-price strong{font-size:25px}
+ .discount-countdown{font-size:11px;padding:6px 9px}
+ .product-summary{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;font-size:13px;line-height:1.8;margin:6px 0}
+ .product-summary.expanded{-webkit-line-clamp:unset}
+ .product-summary-toggle{display:inline-flex;border:0;background:transparent;padding:3px 0;color:var(--sage);font-weight:700;font-size:12px}
+ .product-info .variant-section{margin-top:12px}
+ .product-info .buy-actions{margin-top:10px}
+ .related-products{padding-top:14px;padding-bottom:16px}
+ .related-products .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .product-page .product-tabs{margin-top:12px}
+ .homey-discount-dates{grid-template-columns:1fr}
+}
