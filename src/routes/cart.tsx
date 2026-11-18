@@ -6,7 +6,7 @@ import { CheckCircle2, Trash2, ShoppingCart, ArrowLeft, ArrowRight, MapPin, Truc
 import { rememberOrder } from '@/lib/local-orders';
 import { useCart } from '@/lib/cart';
 import { useCatalog, Notice, Picture, Quantity, Loading } from '@/components/StoreUI';
-import { shippingZones, shippingPromotion, checkoutVariantPrices, effectiveShippingFee, placeOrder, explain, money, imageFor, type Zone, type ShippingPromotion, type Order } from '@/lib/commerce';
+import { shippingZones, shippingPromotion, checkoutVariantPrices, effectiveShippingFee, placeOrder, explain, money, imageFor, effectivePrice, type Zone, type ShippingPromotion, type Order } from '@/lib/commerce';
 import { EGYPT_GOVERNORATES } from '@/lib/shipping-governorates';
 import { useSite, useCopy, loadSite } from '@/lib/site';
 import { whatsappHref } from '@/lib/content-model';
@@ -38,7 +38,9 @@ function Cart() {
   const [stage, setStage] = useState(search.checkout ? 1 : 0);
   const [wizardStep, setWizardStep] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [priceNow,setPriceNow] = useState(()=>Date.now());
   useEffect(() => setMounted(true), []);
+  useEffect(() => { const timer=window.setInterval(()=>setPriceNow(Date.now()),1000); return ()=>window.clearInterval(timer); }, []);
   const wizardRef = useRef<HTMLDivElement | null>(null);
   const wizardRootRef = useRef<HTMLDivElement | null>(null);
   const wizardHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -108,7 +110,7 @@ function Cart() {
   const availableZones = zones.filter(z => z.governorate === governorate);
   const zone = zones.find(z => z.id === zoneId && z.governorate === governorate);
   const fee = effectiveShippingFee(zone, promotion);
-  const subtotal = rows.reduce((n, l) => n + (l.v?.price_minor || 0) * l.quantity, 0);
+  const subtotal = rows.reduce((n, l) => n + (l.v ? effectivePrice(l.v,priceNow) : 0) * l.quantity, 0);
   const invalid = rows.some(l => !l.v || !l.p || l.v.status !== 'published' || l.quantity > l.v.stock_on_hand - l.v.stock_reserved);
   const governorates = EGYPT_GOVERNORATES;
 
@@ -261,7 +263,7 @@ function Cart() {
       }
       const changed = rows.some(line => {
         const fresh = freshVariants.get(line.variantId);
-        return !fresh || fresh.price_minor !== line.v?.price_minor
+        return !fresh || effectivePrice(fresh,priceNow) !== (line.v ? effectivePrice(line.v,priceNow) : 0)
           || fresh.stock_on_hand - fresh.stock_reserved < line.quantity;
       });
       if (changed) {
@@ -330,14 +332,14 @@ function Cart() {
       <div className="checkout-layout" aria-hidden={stage === 1 ? true : undefined}>
         <div className="cart-items">{rows.map(l => <article className="cart-item" key={l.variantId}>
           <Picture src={l.p ? imageFor(l.p, l.v) : undefined} alt={l.p?.title_ar || 'منتج غير متاح'}/>
-          <div><h3>{l.v?.title_override || l.p?.title_ar || 'منتج غير متاح'}</h3><p className="muted">{Object.values(l.v?.options || {}).join(' / ')}</p><strong>{l.v ? money(l.v.price_minor) : 'غير متاح'}</strong>{l.v && l.quantity > l.v.stock_on_hand - l.v.stock_reserved && <p className="danger">الكمية المطلوبة مش متوفرة</p>}</div>
+          <div><h3>{l.v?.title_override || l.p?.title_ar || 'منتج غير متاح'}</h3><p className="muted">{Object.values(l.v?.options || {}).join(' / ')}</p><strong>{l.v ? money(effectivePrice(l.v,priceNow)) : 'غير متاح'}</strong>{l.v && l.quantity > l.v.stock_on_hand - l.v.stock_reserved && <p className="danger">الكمية المطلوبة مش متوفرة</p>}</div>
           <Quantity value={l.quantity} max={Math.max(l.quantity, l.v ? Math.min(999, l.v.stock_on_hand - l.v.stock_reserved) : 1)} onChange={n => { if (isDirect) changeDirectQty(n); else { cart.setQty(l.variantId, n); idempotency.current = ''; } }}/>
-          <b>{money((l.v?.price_minor || 0) * l.quantity)}</b>
+          <b>{money((l.v ? effectivePrice(l.v,priceNow) : 0) * l.quantity)}</b>
           {isDirect ? (l.v ? <Link className="text-button homey-direct-edit" to="/product/$slug" params={{ slug: l.v.slug }}>تغيير المنتج</Link> : <Link className="text-button" to="/products">اختار منتج تاني</Link>) : <button type="button" className="icon-button" aria-label="حذف المنتج من السلة" onClick={() => { cart.remove(l.variantId); idempotency.current = ''; }}><Trash2 size={18}/></button>}
         </article>)}</div>
         <aside className="panel order-summary homey-order-summary">
           <h2>ملخص الطلب</h2>
-          {rows.map(l => <div key={l.variantId} className="summary-line"><span>{l.v?.title_override || l.p?.title_ar || 'غير متاح'} × {l.quantity}</span><b>{money((l.v?.price_minor || 0) * l.quantity)}</b></div>)}
+          {rows.map(l => <div key={l.variantId} className="summary-line"><span>{l.v?.title_override || l.p?.title_ar || 'غير متاح'} × {l.quantity}</span><b>{money((l.v ? effectivePrice(l.v,priceNow) : 0) * l.quantity)}</b></div>)}
           <hr/>
           <div className="summary-line"><span>المنتجات</span><b>{money(subtotal)}</b></div>
           <div className="summary-line"><span><Truck size={16} className="inline-shipping-icon"/> الشحن</span><b>{zone ? promotion?.is_active || zone.fee_minor === 0 ? <span className="free-shipping-label">مجاني 🎉</span> : money(fee) : 'بعد اختيار المحافظة'}</b></div>
@@ -368,7 +370,7 @@ function Cart() {
                 <Picture src={rows[0]?.p ? imageFor(rows[0].p, rows[0].v) : undefined} alt={rows[0]?.v?.title_override || rows[0]?.p?.title_ar || 'المنتج المطلوب'}/>
                 <div className="homey-direct-product-info">
                   <strong>{rows[0]?.v?.title_override || rows[0]?.p?.title_ar || 'المنتج المطلوب'}</strong>
-                  <small>{rows[0]?.v ? money(rows[0].v.price_minor) + ' للقطعة' : 'جاري تحميل بيانات المنتج'}</small>
+                  <small>{rows[0]?.v ? money(effectivePrice(rows[0].v,priceNow)) + ' للقطعة' : 'جاري تحميل بيانات المنتج'}</small>
                   <div className="homey-direct-quantity-row"><span>الكمية</span><Quantity value={directQty} max={directMax} onChange={changeDirectQty}/></div>
                   <b>{money(subtotal)}</b>
                 </div>
@@ -391,7 +393,7 @@ function Cart() {
               <div className="homey-wizard-step-note"><ClipboardCheck size={20}/><span>راجع التفاصيل دي، وممكن ترجع تعدل أي حاجة.</span></div>
               <div className="homey-wizard-review-block"><strong>بيانات التوصيل</strong><p>{form.customer_name.trim()} — <span dir="ltr">{normalizedPhone()}</span></p><p>{governorate}، {form.area.trim()}، {form.address.trim()}</p><button className="text-button" type="button" disabled={busy} onClick={() => { setFailure(''); setWizardStep(1); }}>تعديل العنوان</button></div>
               <div className="homey-wizard-review-block"><strong>ملخص المنتجات</strong>
-                {rows.map(l => <div className="homey-wizard-review-line" key={l.variantId}><span>{l.v?.title_override || l.p?.title_ar || 'منتج'} × {l.quantity}</span><b>{money((l.v?.price_minor || 0) * l.quantity)}</b></div>)}
+                {rows.map(l => <div className="homey-wizard-review-line" key={l.variantId}><span>{l.v?.title_override || l.p?.title_ar || 'منتج'} × {l.quantity}</span><b>{money((l.v ? effectivePrice(l.v,priceNow) : 0) * l.quantity)}</b></div>)}
                 <div className="homey-wizard-review-line"><span>المنتجات</span><b>{money(subtotal)}</b></div>
                 <div className="homey-wizard-review-line"><span>التوصيل</span><b>{zone ? (promotion?.is_active || zone.fee_minor === 0 ? 'مجاني' : money(fee)) : 'غير محدد'}</b></div>
                 <div className="homey-wizard-review-line homey-wizard-total"><span>الإجمالي النهائي</span><b>{money(subtotal + fee)}</b></div>
