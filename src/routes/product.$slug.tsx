@@ -9,6 +9,7 @@ import {useCopy} from '@/lib/site';
 import {useFavorites} from '@/lib/favorites';
 import {useCart} from '@/lib/cart';
 import {latinDigits} from '@/lib/digits';
+import {trackProductView,trackCartAdd} from '@/lib/marketing-tracking';
 import {fetchProductSeo,productJsonLd,productSeoTitle,productSeoDescription,productUrl,safeStructuredData} from '@/lib/seo';
 export const Route=createFileRoute('/product/$slug')({
   loader:({params})=>fetchProductSeo(params.slug),
@@ -53,6 +54,10 @@ function ProductPage() {
     setQty(1);
   }, [slug]);
 
+  useEffect(() => {
+    if (!p || !v) return;
+    trackProductView({id:v.id,name:v.title_override || p.title_ar,priceMinor:v.price_minor,quantity:1});
+  }, [v?.id, p?.id]);
   if (error) return <div className="wrap page"><Notice>{error}</Notice></div>;
   if (loading) return <div className="wrap page"><Loading /></div>;
   if (!p || !v) return <div className="wrap empty"><h1>المنتج غير متاح</h1><Link to="/products" className="btn">عودة للمنتجات</Link></div>;
@@ -67,6 +72,7 @@ function ProductPage() {
   const addItem = () => {
     if (available < qty) return;
     cart.add(v.id, qty);
+    trackCartAdd({id:v.id,name:v.title_override || p.title_ar,priceMinor:v.price_minor,quantity:qty});
     toast.success('اتضاف للسلة', {duration: 1000});
   };
   const buyNow = () => {
