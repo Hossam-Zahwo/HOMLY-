@@ -26,7 +26,7 @@ export const Route=createFileRoute('/product/$slug')({
       meta:[
         {title},
         {name:'description',content:description},
-        ...(product?[{name:'keywords',content:[product.name,product.name+' مصر','شراء '+product.name,'هومي مصر','أدوات منزلية'].join('، ')}]:[]),
+        ...(product&&product.keywords.length?[{name:'keywords',content:[product.name,...product.keywords].slice(0,18).join('، ')}]:[]),
         {property:'og:type',content:product?'product':'website'},
         {property:'og:title',content:title},
         {property:'og:description',content:description},
