@@ -8,7 +8,7 @@ const hasConsent=()=>typeof window!=='undefined' && window.localStorage.getItem(
 export function setMarketingConsent(allowed:boolean){
  if(typeof window==='undefined')return;
  window.localStorage.setItem(consentKey,allowed?'granted':'denied');
- if(allowed){initializeMetaPixel();trackNavigation();}
+ if(allowed){initializeGoogleAnalytics();initializeMetaPixel();trackNavigation();}
 }
 export function marketingConsent(): 'granted'|'denied'|'unset' {
  if(typeof window==='undefined')return 'unset';
@@ -16,6 +16,19 @@ export function marketingConsent(): 'granted'|'denied'|'unset' {
  return value==='granted'||value==='denied'?value:'unset';
 }
 const currency = 'EGP';
+const measurementId='G-C4D2XGGQVP';
+export function initializeGoogleAnalytics(){
+ if(typeof window==='undefined'||!enabled||!hasConsent())return;
+ const w=window as TrackingWindow & {dataLayer?:unknown[][]};
+ if(w.gtag)return;
+ w.dataLayer=w.dataLayer||[];
+ w.gtag=(...args:unknown[])=>{w.dataLayer!.push(args)};
+ w.gtag('js',new Date());
+ w.gtag('config',measurementId,{send_page_view:false});
+ const script=document.createElement('script');script.async=true;
+ script.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(measurementId);
+ document.head.appendChild(script);
+}
 const minorToEgp=(value:number)=>Number((value/100).toFixed(2));
 const item=(p:TrackingItem)=>({item_id:p.id,item_name:p.name,price:minorToEgp(p.priceMinor),quantity:p.quantity});
 const ga=(event:string,data:Record<string,unknown>)=>{if(typeof window!=='undefined'&&enabled&&hasConsent())(window as TrackingWindow).gtag?.('event',event,data)};
