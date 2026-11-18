@@ -3,17 +3,29 @@ export type TrackingItem = {id:string; name:string; priceMinor:number; quantity:
 type TrackingWindow = Window & {gtag?: (...args:any[])=>void; fbq?: (...args:any[])=>void; _fbq?:unknown};
 const pixelId = import.meta.env.VITE_META_PIXEL_ID?.trim();
 const enabled = import.meta.env.VITE_MARKETING_TRACKING_ENABLED === 'true';
+const consentKey='homey-marketing-consent';
+const hasConsent=()=>typeof window!=='undefined' && window.localStorage.getItem(consentKey)==='granted';
+export function setMarketingConsent(allowed:boolean){
+ if(typeof window==='undefined')return;
+ window.localStorage.setItem(consentKey,allowed?'granted':'denied');
+ if(allowed){initializeMetaPixel();trackNavigation();}
+}
+export function marketingConsent(): 'granted'|'denied'|'unset' {
+ if(typeof window==='undefined')return 'unset';
+ const value=window.localStorage.getItem(consentKey);
+ return value==='granted'||value==='denied'?value:'unset';
+}
 const currency = 'EGP';
 const minorToEgp=(value:number)=>Number((value/100).toFixed(2));
 const item=(p:TrackingItem)=>({item_id:p.id,item_name:p.name,price:minorToEgp(p.priceMinor),quantity:p.quantity});
-const ga=(event:string,data:Record<string,unknown>)=>{if(typeof window!=='undefined'&&enabled)(window as TrackingWindow).gtag?.('event',event,data)};
+const ga=(event:string,data:Record<string,unknown>)=>{if(typeof window!=='undefined'&&enabled&&hasConsent())(window as TrackingWindow).gtag?.('event',event,data)};
 const meta=(event:string,data:Record<string,unknown>,eventId?:string)=>{
-  if(typeof window==='undefined'||!enabled||!pixelId)return;
+  if(typeof window==='undefined'||!enabled||!pixelId||!hasConsent())return;
   const fbq=(window as TrackingWindow).fbq;
   if(eventId)fbq?.('track',event,data,{eventID:eventId});else fbq?.('track',event,data);
 };
 export function initializeMetaPixel(){
- if(typeof window==='undefined'||!enabled||!pixelId||!/^\d{8,20}$/.test(pixelId))return;
+ if(typeof window==='undefined'||!enabled||!pixelId||!hasConsent()||!/^\d{8,20}$/.test(pixelId))return;
  const w=window as TrackingWindow;
  if(w.fbq)return;
  const fbq:any=function(...args:unknown[]){if(fbq.callMethod)fbq.callMethod.apply(fbq,args);else fbq.queue.push(args)};
@@ -23,7 +35,7 @@ export function initializeMetaPixel(){
  fbq('init',pixelId);
 }
 export function trackNavigation(){
- if(typeof window==='undefined'||!enabled)return;
+ if(typeof window==='undefined'||!enabled||!hasConsent())return;
  ga('page_view',{page_location:window.location.href,page_path:window.location.pathname+window.location.search});
  meta('PageView',{});
 }
@@ -44,7 +56,7 @@ export function trackCheckoutStart(items:TrackingItem[]){
  meta('InitiateCheckout',{content_ids:items.map(p=>p.id),content_type:'product',currency,value,num_items:items.reduce((s,p)=>s+p.quantity,0)});
 }
 export function trackConfirmedPurchase(order:{id:string;totalMinor:number},items:TrackingItem[]){
- if(typeof window==='undefined'||!enabled||!order.id||!Number.isFinite(order.totalMinor))return;
+ if(typeof window==='undefined'||!enabled||!hasConsent()||!order.id||!Number.isFinite(order.totalMinor))return;
  const eventId='homey-purchase-'+order.id;
  const key='homey-marketing-'+eventId;
  try{if(sessionStorage.getItem(key))return;sessionStorage.setItem(key,'1')}catch{}
