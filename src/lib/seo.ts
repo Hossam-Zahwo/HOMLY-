@@ -36,6 +36,7 @@ export type ProductSeo = {
   priceMinor:number;
   stock:number;
   image:string|null;
+  keywords:string[];
 };
 
 export const cleanDescription = (input:string) => (input||'')
@@ -62,7 +63,7 @@ export async function fetchProductSeo(slug:string):Promise<ProductSeo|null>{
       .eq('slug',slug).eq('status','published').maybeSingle();
     if(ve||!v)return null;
     const {data:p,error:pe}=await supabase.from('homly_products')
-      .select('id,title_ar,description,status,deleted_at').eq('id',v.product_id)
+      .select('id,title_ar,description,seo_keywords,status,deleted_at').eq('id',v.product_id)
       .eq('status','published').maybeSingle();
     if(pe||!p||p.deleted_at)return null;
     const {data:images}=await supabase.from('homly_product_images')
@@ -77,6 +78,7 @@ export async function fetchProductSeo(slug:string):Promise<ProductSeo|null>{
       name,slug:v.slug,sku:v.sku||'',priceMinor,
       stock:Math.max(0,Number(v.stock_on_hand||0)-Number(v.stock_reserved||0)),
       description:cleanDescription(v.description_override||p.description||''),
+      keywords:Array.isArray(p.seo_keywords)?p.seo_keywords.filter((value:unknown):value is string=>typeof value==='string'&&value.trim().length>0).slice(0,18):[],
       image:imageRow?.storage_path?new URL(assetUrl(imageRow.storage_path),HOMEY_ORIGIN).href:null
     };
   }catch{return null;}
@@ -93,6 +95,7 @@ export function productJsonLd(product:ProductSeo) {
     ...(product.description?{description:product.description}:{}),
     ...(product.image?{image:[product.image]}:{}),
     ...(product.sku?{sku:product.sku}:{}),
+    ...(product.keywords.length?{keywords:product.keywords}:{}),
     offers:{'@type':'Offer',url,
       price:(product.priceMinor/100).toFixed(2),priceCurrency:'EGP',
       availability:product.stock>0?'https://schema.org/InStock':'https://schema.org/OutOfStock',
