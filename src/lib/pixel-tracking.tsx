@@ -83,9 +83,20 @@ function initializeMeta() {
 }
 function initializeTikTok(){
   const w=client();if(!w||!tikTokId||w.ttq)return;
-  const q:any=[];const methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie','holdConsent','revokeConsent','grantConsent'];
-  methods.forEach(method=>{q[method]=(...args:unknown[])=>q.push([method,...args]);});
-  q.load=(id:string)=>{const script=document.createElement('script');script.async=true;script.src='https://analytics.tiktok.com/i18n/pixel/events.js?sdkid='+encodeURIComponent(id)+'&lib=ttq';document.head.appendChild(script);};
+  // TikTok's official queue bootstrap: preserves per-pixel metadata for events.js.
+  const q:any=[];
+  const methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie','holdConsent','revokeConsent','grantConsent'];
+  const defer=(target:any,method:string)=>{target[method]=(...args:unknown[])=>{target.push([method,...args]);};};
+  for(const method of methods)defer(q,method);
+  q._i={};q._t={};q._o={};
+  q.instance=(id:string)=>{const instance=q._i[id]||[];for(const method of methods)defer(instance,method);return instance;};
+  q.load=(id:string,options?:Record<string,unknown>)=>{
+    const src='https://analytics.tiktok.com/i18n/pixel/events.js';
+    q._i[id]=[];q._i[id]._u=src;q._t[id]=Date.now();q._o[id]=options||{};
+    const script=document.createElement('script');script.type='text/javascript';script.async=true;
+    script.src=src+'?sdkid='+encodeURIComponent(id)+'&lib=ttq';
+    (document.getElementsByTagName('script')[0]?.parentNode||document.head).appendChild(script);
+  };
   w.ttq=q;w.ttq.load(tikTokId);
 }
 export function PixelRouteTracker() {
