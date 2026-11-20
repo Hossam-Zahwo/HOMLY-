@@ -9,7 +9,7 @@ type AnalyticsWindow = Window & {
   _fbq?: unknown;
 };
 const gaId = import.meta.env.VITE_GA4_MEASUREMENT_ID || 'G-C4D2XGGQVP';
-const metaId = (import.meta.env.VITE_META_PIXEL_ID || '').trim();
+const metaId = (import.meta.env.VITE_META_PIXEL_ID || '1062573933474128').trim();
 
 function client(): AnalyticsWindow | null {
   return typeof window === 'undefined' ? null : window as AnalyticsWindow;
