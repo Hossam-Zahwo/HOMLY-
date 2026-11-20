@@ -33,7 +33,7 @@ function tikTok(event:string,params:Record<string,unknown>,eventId?:string){
   const w=client();if(!tikTokId||!w?.ttq)return;
   w.ttq.track(event,params,eventId?{event_id:eventId}:undefined);
 }
-function tiktokContents(items:Item[]){return items.map(i=>({content_id:i.item_id,content_name:i.item_name,quantity:i.quantity,price:i.price}));}
+function tiktokContents(items:Item[]){return items.map(i=>({content_id:i.item_id,content_name:i.item_name,content_type:'product',quantity:i.quantity,price:i.price}));}
 export function trackViewItem(item:Item) {
   google('view_item',{currency:'EGP',value:item.price,items:[item]});
   meta('ViewContent',{content_ids:[item.item_id],content_type:'product',content_name:item.item_name,value:item.price,currency:'EGP'});
@@ -57,6 +57,7 @@ export function trackPurchase(order:{id:string;total_minor:number;shipping_minor
     try {if(sessionStorage.getItem(key)) return;sessionStorage.setItem(key,'1');} catch {}
   }
   const items=(order.items||[]).map(i=>({item_id:i.variant_id||'',item_name:i.title_snapshot||'',price:(i.unit_price_minor??(i.quantity?i.line_total_minor/i.quantity:0))/100,quantity:i.quantity}));
+  // This is a cash-on-delivery order, not confirmation that money was collected.
   const value=(order.total_minor-order.shipping_minor)/100;
   google('purchase',{transaction_id:order.id,currency:'EGP',value,shipping:order.shipping_minor/100,items});
   meta('Purchase',{currency:'EGP',value,content_ids:items.map(i=>i.item_id).filter(Boolean),content_type:'product',num_items:items.reduce((n,i)=>n+i.quantity,0)},order.id);
