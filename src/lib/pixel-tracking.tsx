@@ -41,6 +41,11 @@ export function trackBeginCheckout(items:Item[]) {
   meta('InitiateCheckout',{currency:'EGP',value,content_ids:items.map(i=>i.item_id),content_type:'product',num_items:items.reduce((n,i)=>n+i.quantity,0)});
 }
 export function trackPurchase(order:{id:string;total_minor:number;shipping_minor:number;items?:Array<{variant_id?:string;title_snapshot?:string;quantity:number;unit_price_minor?:number;line_total_minor:number}>}) {
+  const w=client();
+  if(w){
+    const key='homey-pixel-purchase-'+order.id;
+    try {if(sessionStorage.getItem(key)) return;sessionStorage.setItem(key,'1');} catch {}
+  }
   const items=(order.items||[]).map(i=>({item_id:i.variant_id||'',item_name:i.title_snapshot||'',price:(i.unit_price_minor??(i.quantity?i.line_total_minor/i.quantity:0))/100,quantity:i.quantity}));
   const value=(order.total_minor-order.shipping_minor)/100;
   google('purchase',{transaction_id:order.id,currency:'EGP',value,shipping:order.shipping_minor/100,items});
@@ -49,10 +54,16 @@ export function trackPurchase(order:{id:string;total_minor:number;shipping_minor
 function initializeMeta() {
   const w=client();
   if(!w || !metaId || w.fbq) return;
-  const queue: unknown[][]=[];
-  const fbq=((...args:unknown[])=>{queue.push(args);}) as AnalyticsWindow['fbq'];
-  w.fbq=fbq;
-  w._fbq=fbq;
+  const stub=((...args:unknown[])=>{
+    const fn=stub as typeof stub & {callMethod?:(...args:unknown[])=>void;queue?:unknown[][]};
+    if(fn.callMethod) fn.callMethod(...args);
+    else (fn.queue ||= []).push(args);
+  }) as typeof Function.prototype & {queue?:unknown[][];loaded?:boolean;version?:string;callMethod?:(...args:unknown[])=>void};
+  stub.queue=[];
+  stub.loaded=true;
+  stub.version='2.0';
+  w.fbq=stub;
+  w._fbq=stub;
   const s=document.createElement('script');
   s.async=true;
   s.src='https://connect.facebook.net/en_US/fbevents.js';
