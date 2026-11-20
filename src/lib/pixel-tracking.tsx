@@ -58,7 +58,7 @@ function initializeMeta() {
     const fn=stub as typeof stub & {callMethod?:(...args:unknown[])=>void;queue?:unknown[][]};
     if(fn.callMethod) fn.callMethod(...args);
     else (fn.queue ||= []).push(args);
-  }) as typeof Function.prototype & {queue?:unknown[][];loaded?:boolean;version?:string;callMethod?:(...args:unknown[])=>void};
+  }) as ((...args:unknown[])=>void) & {queue?:unknown[][];loaded?:boolean;version?:string;callMethod?:(...args:unknown[])=>void};
   stub.queue=[];
   stub.loaded=true;
   stub.version='2.0';
