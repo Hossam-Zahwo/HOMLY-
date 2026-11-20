@@ -125,8 +125,15 @@ export function PixelRouteTracker() {
     meta('PageView',{});
     client()?.ttq?.page();
   },[consent,location.pathname,location.searchStr]);
-  if(decided || location.pathname.startsWith('/admin'))return null;
-  const choose=(yes:boolean)=>{try{localStorage.setItem(CONSENT_KEY,yes?'yes':'no');}catch{}setDecided(true);setConsent(yes);};
+  if(location.pathname.startsWith('/admin'))return null;
+  const choose=(yes:boolean)=>{
+    const previouslyAllowed=consent;
+    try{localStorage.setItem(CONSENT_KEY,yes?'yes':'no');}catch{}
+    setDecided(true);setConsent(yes);
+    // Unload any already-loaded marketing scripts if consent is withdrawn.
+    if(previouslyAllowed && !yes)window.location.reload();
+  };
+  if(decided)return <button type="button" onClick={()=>setDecided(false)} style={{position:'fixed',bottom:8,right:8,zIndex:100,border:'1px solid #bbb',borderRadius:6,background:'#fff',color:'#333',fontSize:11,padding:'3px 8px'}}>إعدادات الخصوصية</button>;
   return <aside role="dialog" aria-label="إعدادات ملفات التحليل والإعلانات" style={{position:'fixed',bottom:12,left:12,right:12,zIndex:9999,maxWidth:520,margin:'auto',background:'#fff',color:'#233023',border:'1px solid #ddd',borderRadius:12,padding:16,boxShadow:'0 3px 20px #0002',direction:'rtl'}}>
     <p style={{margin:'0 0 10px'}}>بنستخدم ملفات اختيارية لتحليل زيارات المتجر وتحسين الإعلانات. تقدر توافق أو ترفض، والطلب هيشتغل في الحالتين.</p>
     <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
