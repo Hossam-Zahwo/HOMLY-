@@ -1,4 +1,4 @@
-import {useEffect} from 'react';
+import {useEffect,useState} from 'react';
 import {useLocation} from '@tanstack/react-router';
 
 type Item = {item_id:string; item_name:string; price:number; quantity:number};
@@ -12,25 +12,36 @@ type AnalyticsWindow = Window & {
 const gaId = import.meta.env.VITE_GA4_MEASUREMENT_ID || 'G-C4D2XGGQVP';
 const metaId = (import.meta.env.VITE_META_PIXEL_ID || '1062573933474128').trim();
 const tikTokId = (import.meta.env.VITE_TIKTOK_PIXEL_ID || 'DC0ACP3C77U78FB32HAG').trim();
+const CONSENT_KEY='homey-analytics-consent-v1';
+function hasConsent(){if(typeof window==='undefined')return false;try{return localStorage.getItem(CONSENT_KEY)==='yes';}catch{return false;}}
+function configureGoogle(){
+  const w=client();if(!w||!gaId||w.gtag)return;
+  w.dataLayer=w.dataLayer||[];
+  w.gtag=(...args:unknown[])=>{w.dataLayer!.push(args);};
+  const tag=document.createElement('script');tag.async=true;
+  tag.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(gaId);
+  document.head.appendChild(tag);
+  w.gtag('js',new Date());w.gtag('config',gaId,{send_page_view:false});
+}
 
 function client(): AnalyticsWindow | null {
   return typeof window === 'undefined' ? null : window as AnalyticsWindow;
 }
 function google(event:string, params:Record<string,unknown>) {
   const w=client();
-  if (!w || !gaId) return;
+  if (!w || !gaId || !hasConsent()) return;
   w.dataLayer=w.dataLayer || [];
   if (!w.gtag) w.gtag=(...args:unknown[]) => {w.dataLayer!.push(args);};
   w.gtag('event',event,params);
 }
 function meta(event:string, params:Record<string,unknown>, eventId?:string) {
   const w=client();
-  if (!metaId || !w?.fbq) return;
+  if (!hasConsent() || !metaId || !w?.fbq) return;
   if(eventId) w.fbq('track',event,params,{eventID:eventId});
   else w.fbq('track',event,params);
 }
 function tikTok(event:string,params:Record<string,unknown>,eventId?:string){
-  const w=client();if(!tikTokId||!w?.ttq)return;
+  const w=client();if(!hasConsent()||!tikTokId||!w?.ttq)return;
   w.ttq.track(event,params,eventId?{event_id:eventId}:undefined);
 }
 function tiktokContents(items:Item[]){return items.map(i=>({content_id:i.item_id,content_name:i.item_name,content_type:'product',quantity:i.quantity,price:i.price}));}
@@ -51,6 +62,7 @@ export function trackBeginCheckout(items:Item[]) {
   tikTok('InitiateCheckout',{contents:tiktokContents(items),content_type:'product',currency:'EGP',value});
 }
 export function trackPurchase(order:{id:string;total_minor:number;shipping_minor:number;items?:Array<{variant_id?:string;title_snapshot?:string;quantity:number;unit_price_minor?:number;line_total_minor:number}>}) {
+  if(!hasConsent())return;
   const w=client();
   if(w){
     const key='homey-pixel-purchase-'+order.id;
@@ -65,7 +77,7 @@ export function trackPurchase(order:{id:string;total_minor:number;shipping_minor
 }
 function initializeMeta() {
   const w=client();
-  if(!w || !metaId || w.fbq) return;
+  if(!w || !hasConsent() || !metaId || w.fbq) return;
   const stub=((...args:unknown[])=>{
     const fn=stub as typeof stub & {callMethod?:(...args:unknown[])=>void;queue?:unknown[][]};
     if(fn.callMethod) fn.callMethod(...args);
@@ -83,7 +95,7 @@ function initializeMeta() {
   w.fbq?.('init',metaId);
 }
 function initializeTikTok(){
-  const w=client();if(!w||!tikTokId||w.ttq)return;
+  const w=client();if(!w||!hasConsent()||!tikTokId||w.ttq)return;
   // TikTok's official queue bootstrap: preserves per-pixel metadata for events.js.
   const q:any=[];
   const methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie','holdConsent','revokeConsent','grantConsent'];
@@ -102,13 +114,24 @@ function initializeTikTok(){
 }
 export function PixelRouteTracker() {
   const location=useLocation();
-  useEffect(()=>{initializeMeta();initializeTikTok();},[]);
+  const [consent,setConsent]=useState(false);
+  const [decided,setDecided]=useState(true);
+  useEffect(()=>{setConsent(hasConsent());try{setDecided(localStorage.getItem(CONSENT_KEY)!==null);}catch{setDecided(false);}},[]);
+  useEffect(()=>{if(!consent)return;configureGoogle();initializeMeta();initializeTikTok();},[consent]);
   useEffect(()=>{
-    if(location.pathname.startsWith('/admin')) return;
+    if(!consent || location.pathname.startsWith('/admin'))return;
     const page_path=location.pathname+location.searchStr;
     google('page_view',{page_path,page_location:window.location.href,page_title:document.title});
     meta('PageView',{});
     client()?.ttq?.page();
-  },[location.pathname,location.searchStr]);
-  return null;
+  },[consent,location.pathname,location.searchStr]);
+  if(decided || location.pathname.startsWith('/admin'))return null;
+  const choose=(yes:boolean)=>{try{localStorage.setItem(CONSENT_KEY,yes?'yes':'no');}catch{}setDecided(true);setConsent(yes);};
+  return <aside role="dialog" aria-label="إعدادات ملفات التحليل والإعلانات" style={{position:'fixed',bottom:12,left:12,right:12,zIndex:9999,maxWidth:520,margin:'auto',background:'#fff',color:'#233023',border:'1px solid #ddd',borderRadius:12,padding:16,boxShadow:'0 3px 20px #0002',direction:'rtl'}}>
+    <p style={{margin:'0 0 10px'}}>بنستخدم ملفات اختيارية لتحليل زيارات المتجر وتحسين الإعلانات. تقدر توافق أو ترفض، والطلب هيشتغل في الحالتين.</p>
+    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+      <button className="btn compact" onClick={()=>choose(true)}>موافق</button>
+      <button className="btn outline compact" onClick={()=>choose(false)}>رفض</button>
+    </div>
+  </aside>;
 }
