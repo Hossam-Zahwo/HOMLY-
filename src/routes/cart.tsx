@@ -10,6 +10,7 @@ import { EGYPT_GOVERNORATES } from '@/lib/shipping-governorates';
 import { useSite, useCopy, loadSite } from '@/lib/site';
 import { whatsappHref } from '@/lib/content-model';
 import { orderWhatsAppUrl, requestKey } from '@/lib/checkout-message';
+import {trackBeginCheckout,trackPurchase} from '@/lib/pixel-tracking';
 
 export const Route = createFileRoute('/cart')({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -51,6 +52,7 @@ function Cart() {
   const idempotency = useRef('');
   const attemptHash = useRef('');
   const submitting = useRef(false);
+  const checkoutTracked = useRef('');
   const [whatsappUrl, setWhatsappUrl] = useState('');
 
   // The router can reuse this component when a new Buy Now link is opened.
@@ -215,6 +217,13 @@ function Cart() {
     setFailure('');
     setWizardStep(current => Math.min(2, current + 1));
   };
+  useEffect(() => {
+    if (stage !== 1 || loading || !rows.length || rows.some(l => !l.p || !l.v)) return;
+    const key = JSON.stringify(rows.map(l => [l.variantId,l.quantity]));
+    if (checkoutTracked.current === key) return;
+    checkoutTracked.current = key;
+    trackBeginCheckout(rows.map(l => ({item_id:l.v!.id,item_name:l.v!.title_override||l.p!.title_ar,price:l.v!.price_minor/100,quantity:l.quantity})));
+  }, [stage,loading,products,search.buyNow,directQty,cart.lines]);
   const openWizard = () => {
     setWizardStep(0);
     setFailure('');
@@ -271,6 +280,7 @@ function Cart() {
       const order = await placeOrder({...body, idempotency_key: idempotency.current});
       try { sessionStorage.removeItem('homy-checkout-attempt'); } catch {}
       setResult(order);
+      try { trackPurchase(order); } catch { /* Analytics must never block a completed order. */ }
       rememberContact({...form, customer_phone: normalized, governorate: zone.governorate, shipping_zone_id: zone.id}, remember);
       if (!isDirect) cart.clear(); // Direct checkout must never modify the existing shopping cart.
       // Saved order is confirmed by the database. WhatsApp/settings failures must never reverse this success.

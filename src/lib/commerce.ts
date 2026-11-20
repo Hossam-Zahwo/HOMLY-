@@ -411,7 +411,9 @@ export type CheckoutPayload = {
 export async function placeOrder(payload: CheckoutPayload):Promise<Order>{
  requireConnection();
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),45000);let response;
- try{response=await supabase.rpc('homly_checkout_effective',{payload}).abortSignal(controller.signal)}catch{throw new Error('انقطع الاتصال قبل وصول تأكيد الطلب. أعد المحاولة بنفس البيانات لتجنب التكرار.')}finally{clearTimeout(timer)}
+ let analyticsConsent=false;
+ try { analyticsConsent=typeof window!=='undefined' && window.localStorage.getItem('homey-analytics-consent-v1')==='yes'; } catch { analyticsConsent=false; }
+ try{response=await supabase.rpc('homly_checkout_effective',{payload:{...payload,analytics_consent:analyticsConsent}}).abortSignal(controller.signal)}catch{throw new Error('انقطع الاتصال قبل وصول تأكيد الطلب. أعد المحاولة بنفس البيانات لتجنب التكرار.')}finally{clearTimeout(timer)}
  const {data,error}=response;
  if(error)throw new Error(error.code==='PGRST202'?'خدمة تأكيد الطلب تحتاج تحديث SQL المرفق. لم يصل تأكيد حفظ؛ أعد المحاولة بعد تحديث القاعدة.':error.message);
 

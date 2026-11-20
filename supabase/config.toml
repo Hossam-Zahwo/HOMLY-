@@ -1,2 +1,5 @@
 [functions.homly-checkout]
 verify_jwt = false
+
+[functions.homly-ad-conversions]
+verify_jwt = false # dedicated webhook-secret verification in function; never expose endpoint publicly

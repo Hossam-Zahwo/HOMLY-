@@ -346,6 +346,7 @@ export function ProductCard({ p, v, priority = false }: {
             <div className="homey-card-actions">
                 <button type="button" disabled={stock < 1 || buying} className="btn compact homey-card-add" onClick={() => {
                     cart.add(v.id);
+                    trackAddToCart({item_id:v.id,item_name:v.title_override||p.title_ar,price:v.price_minor/100,quantity:1});
                     toast.success('اتضاف للسلة', {duration: 1000});
                 }}><ShoppingCart size={15}/>{stock > 0 ? copy('productAdd', 'أضف للسلة') : copy('outOfStock', 'غير متوفر')}</button>
                 <button type="button" disabled={stock < 1 || buying} className={'btn compact homey-btn-buy-now' + (buying ? ' homey-buy-now-active' : '')} onClick={buyNow} aria-label={`اطلب الآن: ${title}`}><Zap size={15} aria-hidden="true"/>{buying ? 'جاري الطلب...' : 'اطلب الآن'}</button>
