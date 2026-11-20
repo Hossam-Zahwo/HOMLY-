@@ -1,30 +1,36 @@
-# HOMEY Pixel & CAPI setup — not deployed
+# HOMEY Egypt — analytics and ads integration (staged, not production)
 
-## Verified configuration
-- Meta dataset / Pixel ID: `1062573933474128` (Homm Egypf – Pixel).
-- Existing GA4 Measurement ID in root: `G-C4D2XGGQVP` (owner confirmation still needed).
-- Supabase HOMEY project: `hlcatmtjrmqaakwvfkwf`, order table: `public.homly_orders`.
-- No production deployment has been made as part of this branch.
+## Platforms and IDs (public IDs only)
+- Google Analytics 4: `G-C4D2XGGQVP`. Account linked to Google Ads `400-581-2760`; Google Ads conversion configuration is not confirmed.
+- Meta Pixel: `1062573933474128`.
+- TikTok Pixel: `DC0ACP3C77U78FB32HAG`.
+- The tokens are NEVER present in GitHub source. Both TikTok and unverified Meta CAPI tokens are stored as **sensitive variables on the Vercel project `homly-tuzl`, Preview only**. These Vercel variables do not automatically become Supabase Edge Function secrets.
 
-## Frontend events prepared
-- GA4: page_view, view_item, add_to_cart from product detail, begin_checkout from cart wizard, purchase after confirmed database response.
-- Meta: PageView, ViewContent, AddToCart (product detail), InitiateCheckout and Purchase.
-- EGP monetary values; `transaction_id` and `event_id` use the confirmed database order ID.
-- Full storefront-card AddToCart is **not yet instrumented**. Repeated checkout attempts can produce additional BeginCheckout events.
+## Client tracking prepared
+- Optional consent prompt controls loading Google gtag, Facebook Pixel, and TikTok Pixel.
+- `page_view` / `PageView`, `view_item` / `ViewContent`, `add_to_cart` / `AddToCart`, `begin_checkout` / `InitiateCheckout`.
+- COD order after verified `placeOrder` response: GA4 `purchase`, Meta `Purchase`, TikTok `PlaceAnOrder`; **not** TikTok `Purchase` or `CompletePayment`.
+- EGP prices, content IDs, order ID as browser transaction ID / event ID. Tracked only with visitor opt-in.
+- Browser sessionStorage deduplicates repeated purchase reporting within a session. Server/browser event ID must match for cross-channel dedup.
 
-## Server-side CAPI prepared, NOT enabled
-`supabase/functions/homly-meta-capi/index.ts` receives authenticated INSERT webhooks from `public.homly_orders` and forwards Purchase to Meta. It fails closed until secrets exist.
-- Configure Edge Function secrets `META_CAPI_ACCESS_TOKEN` (sensitive), `META_PIXEL_ID` (optional), `HOMEY_WEBHOOK_SECRET` (random secret).
-- Never store CAPI token or webhook secret in GitHub or in any `VITE_` client environment variable.
-- Deploy Edge Function only after secrets are provisioned.
-- Configure a Supabase Database Webhook for INSERT on `public.homly_orders` pointing to the function URL. Add `x-homey-webhook-secret` HTTP header. Avoid enabling until tests and consent/notice are complete.
-- If using `verify_jwt=false` for the webhook endpoint, the dedicated webhook secret check in the function is mandatory.
-- Server Purchase includes no personal identifying information; event matching may be weak, requiring a consent-aware data policy and event matching implementation.
-- The server and browser send matching event IDs to permit Meta deduplication, but this **must** be checked in Events Manager.
+## Server-side CAPI — scaffold ONLY, NOT ACTIVE
+- `supabase/functions/homly-ad-conversions/index.ts` implements a dedicated, authenticated Supabase database webhook receiver.
+- A request must carry a valid `x-homey-webhook-secret`, be an INSERT on public.homly_orders, and the persisted row must include `analytics_consent === true`. Fail-closed without those checks.
+- **BLOCKER:** `analytics_consent` is not yet persisted by the checkout SQL. Do not enable webhook until that column and trusted checkout logic are implemented and verified.
+- **BLOCKER:** function secrets `HOMEY_WEBHOOK_SECRET`, `META_CAPI_ACCESS_TOKEN`, and `TIKTOK_EVENTS_API_ACCESS_TOKEN` must be set in Supabase's Edge Function secrets (not the client; Vercel Preview secrets don't reach this function).
+- **BLOCKER:** function has not been deployed; INSERT webhook not configured; no live API verification. Meta token origin/type not verified. Current server payload lacks stable customer matching identifiers, so provider acceptance / matching performance is unknown.
+- Existing `homly-meta-capi` is a separate, older function; avoid enabling it along with the unified function or purchases could double count.
+- The `src/lib/tiktok-events.server.ts` sender is also currently a standalone transport only and is not invoked by checkout; don't expose it through a public endpoint.
 
-## Before merge or production
-1. Run `npm run typecheck`, `npm test`, `npm run build`. Tests have NOT been run by this change.
-2. Test on an authorized preview environment; check event deduplication and correctness in Meta Test Events and GA4 DebugView.
-3. Confirm tracking consent/privacy requirements, and implement consent gating if required. The current frontend trackers do not include a consent banner.
-4. Verify Google Analytics property ownership. Google Ads AW conversion ID and label still missing; no Google Ads conversion event was added.
-5. Do not merge or deploy without approval. Review branch changes first.
+## Production preflight
+1. Verify `npm run typecheck`, `npm test`, `npm run build` and inspect Vercel Preview results.
+2. Test browser events in GA4 DebugView, Meta Test Events, TikTok Test Events using a non-production checkout.
+3. Create migration for trusted checkout consent persistence; do not edit the existing production checkout without migration + tests.
+4. Configure Supabase Edge secrets and trusted webhook after consent persistence; verify request signature/secret.
+5. Verify CAPI provider acceptance, retry behavior and delivery idempotency before enabling real traffic.
+6. Audit that banner refusal sends **no** marketing events. Provide a withdrawal mechanism and update privacy notice.
+7. Merge + deploy only with approval. GitHub PR remains a draft.
+
+## Limits
+- No ads launched, no campaigns created, no Google Ads conversion tags activated.
+- Vercel may automatically create protected Preview builds on branch pushes.
