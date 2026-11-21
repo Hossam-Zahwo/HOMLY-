@@ -1,4 +1,4 @@
-import {useEffect} from 'react';
+import {useEffect,useState} from 'react';
 import {useLocation} from '@tanstack/react-router';
 
 // Meta Pixel only. Never send customer names, phone numbers, addresses or email.
@@ -115,6 +115,36 @@ export function PixelRouteTracker(){
   useEffect(()=>{
     if(!init())return;
     window.fbq?.('track','PageView');
+    const onConsent=()=>{if(init())window.fbq?.('track','PageView');};
+    window.addEventListener('homey-marketing-consent-changed',onConsent);
+    return ()=>window.removeEventListener('homey-marketing-consent-changed',onConsent);
   },[location.pathname,location.searchStr]);
   return null;
+}
+
+/** Optional privacy preference entry point; never shows an unsolicited banner. */
+export function MarketingPrivacyControl(){
+  const [open,setOpen]=useState(false);
+  const [enabled,setEnabled]=useState(false);
+  useEffect(()=>{
+    setEnabled(allowed());
+  },[open]);
+  function choose(grant:boolean){
+    try{window.localStorage.setItem(MARKETING_CONSENT_KEY,grant?'granted':'denied');}
+    catch{/* private browsing can block localStorage */}
+    setEnabled(grant);
+    setOpen(false);
+    if(grant)window.dispatchEvent(new Event('homey-marketing-consent-changed'));
+  }
+  return <span className="homey-privacy-control">
+    <button type="button" className="homey-policy-link" onClick={()=>setOpen(true)}>إعدادات الخصوصية</button>
+    {open&&<span role="dialog" aria-modal="true" aria-label="إعدادات خصوصية الإعلانات" style={{display:'block',padding:'12px',background:'#fff',color:'#222',border:'1px solid #ddd',borderRadius:8,maxWidth:320}}>
+      <strong>تفضيلات قياس الإعلانات</strong>
+      <p>هل تسمح باستخدام أدوات Meta لقياس زيارات المنتجات والطلبات وتحسين الإعلانات؟ اختيارك لا يؤثر على إتمام الطلب.</p>
+      <p>الحالة الحالية: {enabled?'مسموح':'غير مسموح'}</p>
+      <button type="button" onClick={()=>choose(true)}>السماح</button>{' '}
+      <button type="button" onClick={()=>choose(false)}>رفض</button>{' '}
+      <button type="button" onClick={()=>setOpen(false)}>إغلاق</button>
+    </span>}
+  </span>;
 }
