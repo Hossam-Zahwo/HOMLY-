@@ -5,7 +5,10 @@ import {useLocation} from '@tanstack/react-router';
 // The pixel is marketing tracking: activate it only after marketing consent.
 // Store the value "granted" under this key from the site's privacy preferences.
 export const MARKETING_CONSENT_KEY = 'homey_marketing_consent';
-const META_PIXEL_ID = '1554969373320320';
+// Primary for campaign optimization; extra datasets receive the same permitted events.
+const PRIMARY_META_PIXEL_ID = '1554969373320320';
+const META_PIXEL_IDS = [PRIMARY_META_PIXEL_ID, '2330454391064281', '1062573933474128'] as const;
+let initializedIds = new Set<string>();
 const CURRENCY = 'EGP';
 type Item = {item_id:string;item_name:string;price:number;quantity:number};
 type PurchaseOrder = {
@@ -51,14 +54,23 @@ function init():boolean{
     script.async=true;
     script.src='https://connect.facebook.net/en_US/fbevents.js';
     document.head.appendChild(script);
-    fbq('init',META_PIXEL_ID);
   }
+  for(const id of META_PIXEL_IDS){
+    if(!initializedIds.has(id)){
+      window.fbq?.('init',id);
+      initializedIds.add(id);
+    }
+  }
+  window.fbq?.('consent','grant');
   return true;
 }
 function send(event:string,params:Record<string,unknown>,eventId?:string):void{
   if(!init())return;
-  if(eventId)window.fbq?.('track',event,params,{eventID:eventId});
-  else window.fbq?.('track',event,params);
+  // trackSingle ensures every event targets exactly one specified dataset.
+  for(const id of META_PIXEL_IDS){
+    if(eventId)window.fbq?.('trackSingle',id,event,params,{eventID:eventId});
+    else window.fbq?.('trackSingle',id,event,params);
+  }
 }
 function price(n:number):number{
   return Number.isFinite(n)?Math.max(0,Math.round(n*100)/100):0;
@@ -113,11 +125,11 @@ export function trackPurchase(order:PurchaseOrder):void{
 export function PixelRouteTracker(){
   const location=useLocation();
   useEffect(()=>{
-    if(!init())return;
-    window.fbq?.('track','PageView');
-    const onConsent=()=>{if(init())window.fbq?.('track','PageView');};
-    window.addEventListener('homey-marketing-consent-changed',onConsent);
-    return ()=>window.removeEventListener('homey-marketing-consent-changed',onConsent);
+    const pageview=()=>send('PageView',{});
+    pageview();
+    // Listen even before consent, otherwise opting in does not activate tracking.
+    window.addEventListener('homey-marketing-consent-changed',pageview);
+    return ()=>window.removeEventListener('homey-marketing-consent-changed',pageview);
   },[location.pathname,location.searchStr]);
   return null;
 }
@@ -135,6 +147,7 @@ export function MarketingPrivacyControl(){
     setEnabled(grant);
     setOpen(false);
     if(grant)window.dispatchEvent(new Event('homey-marketing-consent-changed'));
+    else window.fbq?.('consent','revoke');
   }
   return <span className="homey-privacy-control">
     <button type="button" className="homey-policy-link" onClick={()=>setOpen(true)}>إعدادات الخصوصية</button>
